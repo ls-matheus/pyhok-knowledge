@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "methods": [
+    {
+      "method_id": "method_threshold",
+      "version": "1.0.0",
+      "description": "Avaliação baseada em limiar absoluto.",
+      "engine_component": "evidence_engine"
+    },
+    {
+      "method_id": "method_baseline_deviation",
+      "version": "1.0.0",
+      "description": "Avaliação baseada no desvio em relação à linha de base local.",
+      "engine_component": "evidence_engine"
+    },
+    {
+      "method_id": "method_persistence",
+      "version": "1.0.0",
+      "description": "Avaliação baseada na persistência temporal de um padrão.",
+      "engine_component": "evidence_engine"
+    }
+  ]
+}

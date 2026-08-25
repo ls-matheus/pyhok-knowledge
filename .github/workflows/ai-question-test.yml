@@ -28,88 +28,159 @@ jobs:
           GEMINI_MODEL: gemini-3.6-flash
         run: python generator/generate_question.py
 
-      - name: Validate generated JSON
+      - name: Find generated question
+        id: generated
+        run: |
+          FILE=$(find generator/output/questions -maxdepth 1 -name 'q_*.json' -type f | sort | tail -n 1)
+
+          if [ -z "$FILE" ]; then
+            echo "No generated question found."
+            exit 1
+          fi
+
+          echo "file=$FILE" >> "$GITHUB_OUTPUT"
+          echo "Generated file: $FILE"
+
+      - name: Validate Question Schema
+        env:
+          QUESTION_FILE: ${{ steps.generated.outputs.file }}
         run: |
           python - <<'PY'
           import json
+          import os
           from pathlib import Path
           from jsonschema import Draft7Validator
 
-          output = Path("generator/output/generated_question.json")
-          schema = Path("schemas/v2/question.schema.json")
+          question_path = Path(os.environ["QUESTION_FILE"])
+          schema_path = Path("schemas/v2/question.schema.json")
 
-          with output.open("r", encoding="utf-8") as f:
-              question = json.load(f)
+          question = json.loads(
+              question_path.read_text(encoding="utf-8")
+          )
 
-          with schema.open("r", encoding="utf-8") as f:
-              schema_data = json.load(f)
+          schema = json.loads(
+              schema_path.read_text(encoding="utf-8")
+          )
 
-          validator = Draft7Validator(schema_data)
-          errors = sorted(validator.iter_errors(question), key=lambda e: list(e.path))
+          validator = Draft7Validator(schema)
+          errors = sorted(
+              validator.iter_errors(question),
+              key=lambda e: list(e.path)
+          )
 
           if errors:
               print("QUESTION SCHEMA VALIDATION: FAILED")
+
               for error in errors:
-                  print(f"- {error.message}")
+                  print("-", error.message)
+
               raise SystemExit(1)
 
           print("QUESTION SCHEMA VALIDATION: PASSED")
           PY
 
-      - name: Validate signal references
+      - name: Validate Signal References
+        env:
+          QUESTION_FILE: ${{ steps.generated.outputs.file }}
         run: |
           python - <<'PY'
           import json
+          import os
           from pathlib import Path
 
-          question_path = Path("generator/output/generated_question.json")
+          question_path = Path(os.environ["QUESTION_FILE"])
+          question = json.loads(
+              question_path.read_text(encoding="utf-8")
+          )
+
           signals_dir = Path("data/signals")
 
-          question = json.loads(question_path.read_text(encoding="utf-8"))
-
-          available = set()
+          available_signals = set()
 
           for path in signals_dir.glob("*.json"):
-              signal = json.loads(path.read_text(encoding="utf-8"))
-              available.add(signal["id"])
+              signal = json.loads(
+                  path.read_text(encoding="utf-8")
+              )
+              available_signals.add(signal["id"])
 
           errors = []
 
           for signal_id in question["required_signals"]:
-              if signal_id not in available:
+              if signal_id not in available_signals:
                   errors.append(
-                      f"Required signal not found: {signal_id}"
+                      f"Unknown required signal: {signal_id}"
                   )
 
           for rule in question["evaluation_trigger"]["rules"]:
               signal_id = rule["signal_id"]
 
-              if signal_id not in available:
+              if signal_id not in available_signals:
                   errors.append(
-                      f"Trigger signal not found: {signal_id}"
+                      f"Unknown trigger signal: {signal_id}"
                   )
 
           if errors:
               print("SIGNAL REFERENCE VALIDATION: FAILED")
+
               for error in errors:
-                  print(f"- {error}")
+                  print("-", error)
+
               raise SystemExit(1)
 
           print("SIGNAL REFERENCE VALIDATION: PASSED")
           PY
 
+      - name: Validate Evaluation Method
+        env:
+          QUESTION_FILE: ${{ steps.generated.outputs.file }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          question = json.loads(
+              Path(os.environ["QUESTION_FILE"]).read_text()
+          )
+
+          methods = json.loads(
+              Path("generator/methods/methods.json").read_text()
+          )
+
+          known = {
+              method["method_id"]
+              for method in methods["methods"]
+          }
+
+          method_id = question["evaluation_model"]["method_id"]
+
+          if method_id not in known:
+              print(
+                  f"Unknown evaluation method: {method_id}"
+              )
+              raise SystemExit(1)
+
+          print(
+              f"EVALUATION METHOD VALIDATION: PASSED ({method_id})"
+          )
+          PY
+
       - name: Show generated question
-        run: cat generator/output/generated_question.json
+        env:
+          QUESTION_FILE: ${{ steps.generated.outputs.file }}
+        run: cat "$QUESTION_FILE"
 
       - name: Commit generated hypothesis
+        env:
+          QUESTION_FILE: ${{ steps.generated.outputs.file }}
         run: |
           git config user.name "PyHok Agent Generator"
           git config user.email "actions@github.com"
 
-          git add generator/output/generated_question.json
+          git add "$QUESTION_FILE"
 
           if git diff --cached --quiet; then
-            echo "No generated changes to commit."
+            echo "No changes to commit."
             exit 0
           fi
 

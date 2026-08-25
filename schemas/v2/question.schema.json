@@ -10,6 +10,7 @@
     "hypothesis",
     "required_signals",
     "evaluation_trigger",
+    "evaluation_model",
     "evidence_model",
     "cortex_weights"
   ],
@@ -135,6 +136,28 @@
           "type": "number",
           "minimum": -1.0,
           "maximum": 1.0
+        }
+      }
+    },
+    "evaluation_model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method_id",
+        "version",
+        "parameters"
+      ],
+      "properties": {
+        "method_id": {
+          "type": "string",
+          "pattern": "^method_[a-z0-9_]+$"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "parameters": {
+          "type": "object"
         }
       }
     }
