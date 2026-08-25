@@ -27,6 +27,7 @@ if target.exists():
     )
     sys.exit(1)
 
+target.parent.mkdir(parents=True, exist_ok=True)
 target.write_text(
     json.dumps(
         question,
