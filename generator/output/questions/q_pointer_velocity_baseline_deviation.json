@@ -1,0 +1,36 @@
+{
+  "id": "q_pointer_velocity_baseline_deviation",
+  "hypothesis": "A velocidade de movimentação do ponteiro apresenta desvio significativo em relação à linha de base local.",
+  "required_signals": [
+    "sig_test_pointer_velocity"
+  ],
+  "evaluation_trigger": {
+    "logical_operator": "AND",
+    "rules": [
+      {
+        "signal_id": "sig_test_pointer_velocity",
+        "operator": ">",
+        "threshold": 0.0,
+        "window_ms": 1000
+      }
+    ]
+  },
+  "evaluation_model": {
+    "method_id": "method_baseline_deviation",
+    "version": "1.0.0",
+    "parameters": {
+      "baseline_window_ms": 5000,
+      "deviation_threshold": 1.5
+    }
+  },
+  "evidence_model": {
+    "base_strength": 0.7,
+    "decay_rate_per_sec": 0.05
+  },
+  "cortex_weights": {
+    "focus": -0.2,
+    "stress": 0.3,
+    "autonomy": 0.0,
+    "fatigue": 0.3
+  }
+}
