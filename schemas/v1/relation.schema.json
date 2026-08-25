@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pyhok.org/schema/v1/relation.schema.json",
+  "title": "PyHokRelation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source_question_id",
+    "target_question_id",
+    "relation_type",
+    "weight"
+  ],
+  "properties": {
+    "source_question_id": {
+      "type": "string",
+      "pattern": "^q_[a-z0-9_]+$"
+    },
+    "target_question_id": {
+      "type": "string",
+      "pattern": "^q_[a-z0-9_]+$"
+    },
+    "relation_type": {
+      "type": "string",
+      "enum": [
+        "REINFORCES",
+        "CONTRADICTS",
+        "REQUIRES",
+        "SUPERSEDES"
+      ]
+    },
+    "weight": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    }
+  }
+}
