@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   generate-question:
@@ -20,7 +20,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install -r generator/requirements.txt
+        run: pip install -r generator/requirements.txt jsonschema
 
       - name: Generate hypothesis with Gemini
         env:
@@ -28,12 +28,90 @@ jobs:
           GEMINI_MODEL: gemini-3.6-flash
         run: python generator/generate_question.py
 
-      - name: Display generated result
+      - name: Validate generated JSON
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from jsonschema import Draft7Validator
+
+          output = Path("generator/output/generated_question.json")
+          schema = Path("schemas/v2/question.schema.json")
+
+          with output.open("r", encoding="utf-8") as f:
+              question = json.load(f)
+
+          with schema.open("r", encoding="utf-8") as f:
+              schema_data = json.load(f)
+
+          validator = Draft7Validator(schema_data)
+          errors = sorted(validator.iter_errors(question), key=lambda e: list(e.path))
+
+          if errors:
+              print("QUESTION SCHEMA VALIDATION: FAILED")
+              for error in errors:
+                  print(f"- {error.message}")
+              raise SystemExit(1)
+
+          print("QUESTION SCHEMA VALIDATION: PASSED")
+          PY
+
+      - name: Validate signal references
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          question_path = Path("generator/output/generated_question.json")
+          signals_dir = Path("data/signals")
+
+          question = json.loads(question_path.read_text(encoding="utf-8"))
+
+          available = set()
+
+          for path in signals_dir.glob("*.json"):
+              signal = json.loads(path.read_text(encoding="utf-8"))
+              available.add(signal["id"])
+
+          errors = []
+
+          for signal_id in question["required_signals"]:
+              if signal_id not in available:
+                  errors.append(
+                      f"Required signal not found: {signal_id}"
+                  )
+
+          for rule in question["evaluation_trigger"]["rules"]:
+              signal_id = rule["signal_id"]
+
+              if signal_id not in available:
+                  errors.append(
+                      f"Trigger signal not found: {signal_id}"
+                  )
+
+          if errors:
+              print("SIGNAL REFERENCE VALIDATION: FAILED")
+              for error in errors:
+                  print(f"- {error}")
+              raise SystemExit(1)
+
+          print("SIGNAL REFERENCE VALIDATION: PASSED")
+          PY
+
+      - name: Show generated question
         run: cat generator/output/generated_question.json
 
-      - name: Upload generated hypothesis
-        uses: actions/upload-artifact@v4
-        with:
-          name: generated-question
-          path: generator/output/generated_question.json
-          retention-days: 7
+      - name: Commit generated hypothesis
+        run: |
+          git config user.name "PyHok Agent Generator"
+          git config user.email "actions@github.com"
+
+          git add generator/output/generated_question.json
+
+          if git diff --cached --quiet; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+
+          git commit -m "ai: generate observational hypothesis"
+          git push
