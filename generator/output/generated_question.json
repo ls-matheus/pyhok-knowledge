@@ -1,6 +1,6 @@
 {
-  "id": "q_pointer_velocity_variability",
-  "hypothesis": "Alteracao persistente na velocidade do movimento do ponteiro durante a interacao em comparacao com a linha de base.",
+  "id": "q_test_pointer_velocity_variability",
+  "hypothesis": "A velocidade do ponteiro exibe flutuações e desvios significativos em relação à linha de base local do usuário durante a tarefa de navegação.",
   "required_signals": [
     "sig_test_pointer_velocity"
   ],
@@ -10,19 +10,19 @@
       {
         "signal_id": "sig_test_pointer_velocity",
         "operator": ">",
-        "threshold": 1.5,
+        "threshold": 1.25,
         "window_ms": 1000
       }
     ]
   },
   "evidence_model": {
-    "base_strength": 0.7,
-    "decay_rate_per_sec": 0.05
+    "base_strength": 0.65,
+    "decay_rate_per_sec": 0.03
   },
   "cortex_weights": {
     "focus": -0.2,
     "stress": 0.3,
     "autonomy": 0.0,
-    "fatigue": 0.4
+    "fatigue": 0.2
   }
 }
