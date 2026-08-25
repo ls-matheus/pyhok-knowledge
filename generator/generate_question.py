@@ -7,12 +7,17 @@ import sys
 from pathlib import Path
 
 from google import genai
+from google.genai import types
+from jsonschema import Draft7Validator
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
-INPUT_FILE = ROOT / "generator" / "input" / "test_observation.json"
-METHODS_FILE = ROOT / "generator" / "methods" / "methods.json"
-OUTPUT_DIR = ROOT / "generator" / "output" / "questions"
+INPUT_FILE = ROOT / "generator/input/test_observation.json"
+METHODS_FILE = ROOT / "generator/methods/methods.json"
+AI_SCHEMA_FILE = ROOT / "generator/ai_question_response.schema.json"
+CANONICAL_SCHEMA_FILE = ROOT / "schemas/v2/question.schema.json"
+OUTPUT_DIR = ROOT / "generator/output/questions"
 
 API_KEY = os.environ.get("GEMINI_API_KEY")
 MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
@@ -20,6 +25,12 @@ MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 if not API_KEY:
     print("ERROR: GEMINI_API_KEY is not configured.")
     sys.exit(1)
+
+
+def fail(message: str) -> None:
+    print(f"GENERATOR REJECTED: {message}")
+    raise SystemExit(1)
+
 
 observation = json.loads(
     INPUT_FILE.read_text(encoding="utf-8")
@@ -29,112 +40,80 @@ methods = json.loads(
     METHODS_FILE.read_text(encoding="utf-8")
 )
 
-available_methods = methods["methods"]
+ai_schema = json.loads(
+    AI_SCHEMA_FILE.read_text(encoding="utf-8")
+)
 
-client = genai.Client(api_key=API_KEY)
+canonical_schema = json.loads(
+    CANONICAL_SCHEMA_FILE.read_text(encoding="utf-8")
+)
+
+enabled_methods = [
+    method
+    for method in methods["methods"]
+    if method.get("enabled") is True
+]
+
+allowed_method_ids = {
+    method["method_id"]
+    for method in enabled_methods
+}
+
+available_signals = set(
+    observation["available_signals"]
+)
 
 prompt = f"""
 You are the PyHok Epistemic Agent.
 
-Your task is to propose ONE observational hypothesis for the
-PyHok Sinapse engine.
+Generate exactly ONE observational hypothesis.
 
-STRICT RULES:
+The hypothesis is NOT a diagnosis.
+Do not mention:
+- syndromes
+- disorders
+- disabilities
+- medical conditions
+- clinical diagnoses
 
-1. Do not diagnose medical conditions.
-2. Do not infer syndromes, disorders, disabilities, or clinical labels.
-3. Describe only an observable behavioral hypothesis.
-4. Use only signals explicitly listed in available_signals.
-5. Select exactly ONE evaluation method from available_methods.
-6. Do not invent a method_id.
-7. The evaluation method must match the semantic meaning of the hypothesis.
-8. Return ONLY valid JSON.
-9. Do not add markdown.
-10. Do not add explanatory text.
-11. The hypothesis may refer to a baseline only if the selected
-    evaluation method supports baseline comparison.
-12. evaluation_model is MANDATORY.
-13. method_id MUST be selected from available_methods.
-14. NEVER omit evaluation_model.
-15. If the hypothesis refers to "baseline", "deviation from baseline",
-    "personal baseline", or equivalent semantics, prefer
-    method_baseline_deviation.
-12. evaluation_model is MANDATORY.
-13. method_id MUST be selected from available_methods.
-14. NEVER omit evaluation_model.
-15. If the hypothesis refers to "baseline", "deviation from baseline",
-    "personal baseline", or equivalent semantics, prefer
-    method_baseline_deviation.
+Use ONLY these available signal identifiers:
 
-Required JSON structure:
+{json.dumps(sorted(available_signals), ensure_ascii=False)}
 
-{{
-  "id": "q_...",
-  "hypothesis": "...",
+Use ONLY these evaluation methods:
 
-  "required_signals": [
-    "sig_..."
-  ],
+{json.dumps(enabled_methods, ensure_ascii=False, indent=2)}
 
-  "evaluation_trigger": {{
-    "logical_operator": "AND",
-    "rules": [
-      {{
-        "signal_id": "sig_...",
-        "operator": ">",
-        "threshold": 0.0,
-        "window_ms": 1000
-      }}
-    ]
-  }},
+You MUST include evaluation_model.
 
-  "evaluation_model": {{
-    "method_id": "method_...",
-    "version": "1.0.0",
-    "parameters": {{}}
-  }},
+If the hypothesis describes deviation from a personal or local baseline,
+the evaluation method MUST be method_baseline_deviation.
 
-  "evidence_model": {{
-    "base_strength": 0.0,
-    "decay_rate_per_sec": 0.0
-  }},
+Do not invent:
+- signal IDs
+- method IDs
+- method versions
+- schema fields
+- capabilities
+- sensor sources
 
-  "cortex_weights": {{
-    "focus": 0.0,
-    "stress": 0.0,
-    "autonomy": 0.0,
-    "fatigue": 0.0
-  }}
-}}
+Use only the fields defined by the output schema.
 
 Observation:
 
-{json.dumps(
-    observation,
-    ensure_ascii=False,
-    indent=2
-)}
-
-Available signals:
-
-{json.dumps(
-    observation["available_signals"],
-    ensure_ascii=False,
-    indent=2
-)}
-
-Available evaluation methods:
-
-{json.dumps(
-    available_methods,
-    ensure_ascii=False,
-    indent=2
-)}
+{json.dumps(observation, ensure_ascii=False, indent=2)}
 """
+
+client = genai.Client(api_key=API_KEY)
 
 response = client.models.generate_content(
     model=MODEL,
-    contents=prompt
+    contents=prompt,
+    config=types.GenerateContentConfig(
+        response_mime_type="application/json",
+        response_schema=ai_schema,
+        temperature=0.0,
+    ),
 )
 
 text = response.text.strip()
@@ -142,92 +121,143 @@ text = response.text.strip()
 try:
     result = json.loads(text)
 except json.JSONDecodeError as exc:
-    print("ERROR: Gemini did not return valid JSON.")
-    print(text)
-    raise SystemExit(1) from exc
+    fail(f"Gemini did not return valid JSON: {exc}")
 
-required_fields = [
-    "id",
-    "hypothesis",
-    "required_signals",
-    "evaluation_trigger",
-    "evaluation_model",
-    "evidence_model",
-    "cortex_weights",
-]
 
-missing = [
-    field for field in required_fields
-    if field not in result
-]
+# ------------------------------------------------------------
+# Local AI-output validation
+# ------------------------------------------------------------
 
-if missing:
-    print("ERROR: generated question is missing required fields:")
-    for field in missing:
-        print(f"- {field}")
-    sys.exit(1)
+ai_validator = Draft7Validator(ai_schema)
+ai_errors = sorted(
+    ai_validator.iter_errors(result),
+    key=lambda error: list(error.path),
+)
+
+if ai_errors:
+    fail(
+        "structured output failed local AI schema validation: "
+        + "; ".join(error.message for error in ai_errors)
+    )
+
+
+canonical_validator = Draft7Validator(canonical_schema)
+
+canonical_errors = sorted(
+    canonical_validator.iter_errors(result),
+    key=lambda error: list(error.path),
+)
+
+if canonical_errors:
+    fail(
+        "question failed canonical schema validation: "
+        + "; ".join(error.message for error in canonical_errors)
+    )
+
+
+question_id = result["id"]
+
+if not re.fullmatch(
+    r"q_[a-z0-9_]+",
+    question_id,
+):
+    fail(f"invalid question id: {question_id}")
+
+
+# ------------------------------------------------------------
+# Signal allowlist
+# ------------------------------------------------------------
+
+for signal_id in result["required_signals"]:
+    if signal_id not in available_signals:
+        fail(
+            f"unknown signal referenced: {signal_id}"
+        )
+
+for rule in result["evaluation_trigger"]["rules"]:
+    signal_id = rule["signal_id"]
+
+    if signal_id not in available_signals:
+        fail(
+            f"unknown trigger signal: {signal_id}"
+        )
+
+
+# ------------------------------------------------------------
+# Method allowlist
+# ------------------------------------------------------------
 
 evaluation_model = result["evaluation_model"]
+method_id = evaluation_model["method_id"]
 
-if not isinstance(evaluation_model, dict):
-    print("ERROR: evaluation_model must be an object.")
-    sys.exit(1)
+if method_id not in allowed_method_ids:
+    fail(
+        f"unknown or disabled evaluation method: {method_id}"
+    )
 
-for field in ("method_id", "version", "parameters"):
-    if field not in evaluation_model:
-        print(f"ERROR: evaluation_model missing field: {field}")
-        sys.exit(1)
 
-required_fields = [
-    "id",
-    "hypothesis",
-    "required_signals",
-    "evaluation_trigger",
-    "evaluation_model",
-    "evidence_model",
-    "cortex_weights",
-]
+# ------------------------------------------------------------
+# Baseline semantic guard
+# ------------------------------------------------------------
 
-missing = [
-    field for field in required_fields
-    if field not in result
-]
+hypothesis = result["hypothesis"].lower()
 
-if missing:
-    print("ERROR: generated question is missing required fields:")
-    for field in missing:
-        print(f"- {field}")
-    sys.exit(1)
+baseline_terms = (
+    "baseline",
+    "linha de base",
+    "linha-base",
+    "personal baseline",
+    "local baseline",
+)
 
-evaluation_model = result["evaluation_model"]
+mentions_baseline = any(
+    term in hypothesis
+    for term in baseline_terms
+)
 
-if not isinstance(evaluation_model, dict):
-    print("ERROR: evaluation_model must be an object.")
-    sys.exit(1)
+if (
+    mentions_baseline
+    and method_id != "method_baseline_deviation"
+):
+    fail(
+        "hypothesis references baseline but selected method "
+        "is not method_baseline_deviation"
+    )
 
-for field in ("method_id", "version", "parameters"):
-    if field not in evaluation_model:
-        print(f"ERROR: evaluation_model missing field: {field}")
-        sys.exit(1)
 
-question_id = result.get("id", "")
+# ------------------------------------------------------------
+# Duplicate protection
+# ------------------------------------------------------------
 
-if not re.fullmatch(r"q_[a-z0-9_]+", question_id):
-    print(f"ERROR: invalid question id: {question_id}")
-    sys.exit(1)
-
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_DIR.mkdir(
+    parents=True,
+    exist_ok=True,
+)
 
 output_file = OUTPUT_DIR / f"{question_id}.json"
 
 if output_file.exists():
-    print(f"ERROR: question already exists: {output_file}")
-    sys.exit(1)
+    fail(
+        f"question already exists: {output_file}"
+    )
+
 
 output_file.write_text(
-    json.dumps(result, ensure_ascii=False, indent=2) + "\n",
-    encoding="utf-8"
+    json.dumps(
+        result,
+        ensure_ascii=False,
+        indent=2,
+    )
+    + "\n",
+    encoding="utf-8",
 )
 
-print(f"Generated question: {question_id}")
-print(f"Output: {output_file}")
+print(
+    f"QUESTION APPROVED LOCALLY: {question_id}"
+)
+print(
+    f"METHOD: {method_id}"
+)
+print(
+    f"OUTPUT: {output_file}"
+)

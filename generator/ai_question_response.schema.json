@@ -1,0 +1,99 @@
+{
+  "type": "object",
+  "required": [
+    "id",
+    "hypothesis",
+    "required_signals",
+    "evaluation_trigger",
+    "evaluation_model",
+    "evidence_model",
+    "cortex_weights"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "hypothesis": {
+      "type": "string"
+    },
+    "required_signals": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "evaluation_trigger": {
+      "type": "object",
+      "required": [
+        "logical_operator",
+        "rules"
+      ],
+      "properties": {
+        "logical_operator": {
+          "type": "string",
+          "enum": ["AND", "OR"]
+        },
+        "rules": {
+          "type": "array"
+        }
+      }
+    },
+    "evaluation_model": {
+      "type": "object",
+      "required": [
+        "method_id",
+        "version",
+        "parameters"
+      ],
+      "properties": {
+        "method_id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "parameters": {
+          "type": "object"
+        }
+      }
+    },
+    "evidence_model": {
+      "type": "object",
+      "required": [
+        "base_strength",
+        "decay_rate_per_sec"
+      ],
+      "properties": {
+        "base_strength": {
+          "type": "number"
+        },
+        "decay_rate_per_sec": {
+          "type": "number"
+        }
+      }
+    },
+    "cortex_weights": {
+      "type": "object",
+      "required": [
+        "focus",
+        "stress",
+        "autonomy",
+        "fatigue"
+      ],
+      "properties": {
+        "focus": {
+          "type": "number"
+        },
+        "stress": {
+          "type": "number"
+        },
+        "autonomy": {
+          "type": "number"
+        },
+        "fatigue": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}
