@@ -1,10 +1,7 @@
 {
   "observation_id": "obs_test_001",
-  "description": "Durante uma interação simulada, foi observada uma alteração persistente na variabilidade da trajetória do ponteiro em comparação com a linha de base local.",
+  "description": "Interação simulada em que um sinal de movimento apresenta alteração persistente em relação ao comportamento observado anteriormente.",
   "available_signals": [
     "sig_test_pointer_velocity"
-  ],
-  "context": {
-    "test_only": true
-  }
+  ]
 }

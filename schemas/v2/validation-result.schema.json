@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pyhok.org/schema/v2/validation-result.schema.json",
+  "title": "PyHokValidationResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "checks"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "APPROVED",
+        "REJECTED"
+      ]
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "references",
+        "method",
+        "duplicates",
+        "conflicts"
+      ],
+      "properties": {
+        "schema": {
+          "type": "boolean"
+        },
+        "references": {
+          "type": "boolean"
+        },
+        "method": {
+          "type": "boolean"
+        },
+        "duplicates": {
+          "type": "boolean"
+        },
+        "conflicts": {
+          "type": "boolean"
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

@@ -1,40 +1,71 @@
 # PyHok Knowledge
 
-Versioned, hypothesis-driven knowledge repository for the PyHok/Sinapse architecture.
+Declarative, versioned, hypothesis-driven knowledge repository for PyHok / Sinapse.
 
-## Core Entities
+## Responsibility Boundary
 
-- SignalDefinition
-- QuestionEntity
-- Relation
-- DatasetRelease
+### PyHok Knowledge
 
-## Evolution Model
+Defines:
 
-Kernel evolution:
-- Manual
-- Compiled
-- Released
+- SignalDefinitions
+- QuestionEntities
+- Relations
+- EvaluationMethod contracts
+- Dataset releases
+- Agent proposals
+- Validation and publication rules
 
-Policy evolution:
-- Controlled
-- Versioned
-- Invariant-tested
+### Sinapse
 
-Dataset evolution:
-- Automated
-- Agent-generated
-- Schema-validated
-- Conflict-checked
-- Released immutably
+Implements:
 
-## Release Principles
+- signal acquisition
+- normalization
+- feature extraction
+- evaluation methods
+- baseline calculation
+- evidence calculation
+- evidence fusion
+- state estimation
+- confidence / uncertainty
+- geometric projection
+- policy execution
 
-1. Semantic Versioning
-2. Immutable releases
-3. SHA-256 integrity
-4. Parent release lineage
-5. Engine compatibility declaration
-6. Schema versioning
-7. Agent proposals are never direct authority
-8. Publication only after validation pipeline
+The Knowledge Repository NEVER executes evaluation methods.
+
+It only references methods by stable identifiers and versions.
+
+## Agent Authority
+
+The Agent Generator may:
+
+- propose new questions
+- propose relations
+- propose signal requirements
+
+The Agent may NOT:
+
+- execute native capabilities
+- modify the Sinapse implementation
+- modify Policy logic
+- publish without validation
+
+## Publication Pipeline
+
+Agent
+→ Proposal
+→ Schema Validation
+→ Reference Validation
+→ Method Compatibility Check
+→ Duplicate Check
+→ Conflict Check
+→ Release
+→ Git
+
+## Evolution
+
+The Knowledge Dataset may evolve independently from the Sinapse engine.
+
+A new method can only be used by a QuestionEntity when the target
+Sinapse release declares that method/version as supported.

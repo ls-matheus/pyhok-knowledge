@@ -1,4 +1,4 @@
-name: AI Question Generator Test
+name: PyHok AI Knowledge Generator
 
 on:
   workflow_dispatch:
@@ -7,11 +7,11 @@ permissions:
   contents: write
 
 jobs:
-  generate-question:
+  generate:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Python
@@ -22,17 +22,14 @@ jobs:
       - name: Install dependencies
         run: pip install -r generator/requirements.txt
 
-      - name: Generate structured hypothesis with Gemini
+      - name: Generate proposal with Gemini
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: gemini-3.6-flash
         run: python generator/generate_question.py
 
-      - name: Repository engine test
-        run: python tests/engine/run_engine_test.py
-
       - name: Locate generated question
-        id: generated
+        id: question
         run: |
           FILE=$(find generator/output/questions \
             -maxdepth 1 \
@@ -44,62 +41,25 @@ jobs:
             | cut -d' ' -f2-)
 
           test -n "$FILE"
+
           echo "file=$FILE" >> "$GITHUB_OUTPUT"
 
-      - name: Final canonical validation
+      - name: Validate question
         env:
-          QUESTION_FILE: ${{ steps.generated.outputs.file }}
+          QUESTION_FILE: ${{ steps.question.outputs.file }}
         run: |
-          python - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-          from jsonschema import Draft7Validator
+          python validators/validate_question.py "$QUESTION_FILE"
 
-          question = json.loads(
-              Path(os.environ["QUESTION_FILE"])
-              .read_text(encoding="utf-8")
-          )
-
-          schema = json.loads(
-              Path("schemas/v2/question.schema.json")
-              .read_text(encoding="utf-8")
-          )
-
-          errors = sorted(
-              Draft7Validator(schema).iter_errors(question),
-              key=lambda error: list(error.path)
-          )
-
-          if errors:
-              print("FINAL VALIDATION: FAILED")
-
-              for error in errors:
-                  print("-", error.message)
-
-              raise SystemExit(1)
-
-          print("FINAL VALIDATION: PASSED")
-          PY
-
-      - name: Show approved hypothesis
+      - name: Publish question
         env:
-          QUESTION_FILE: ${{ steps.generated.outputs.file }}
-        run: cat "$QUESTION_FILE"
-
-      - name: Commit approved hypothesis
-        env:
-          QUESTION_FILE: ${{ steps.generated.outputs.file }}
+          QUESTION_FILE: ${{ steps.question.outputs.file }}
         run: |
-          git config user.name "PyHok Agent Generator"
+          cp "$QUESTION_FILE" "data/questions/$(basename "$QUESTION_FILE")"
+
+          git config user.name "PyHok Knowledge Agent"
           git config user.email "actions@github.com"
 
-          git add "$QUESTION_FILE"
+          git add data/questions/$(basename "$QUESTION_FILE")
 
-          if git diff --cached --quiet; then
-            echo "No new hypothesis to commit."
-            exit 0
-          fi
-
-          git commit -m "ai: generate observational hypothesis"
+          git commit -m "ai: publish validated question"
           git push
