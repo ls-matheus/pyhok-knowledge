@@ -1,0 +1,6 @@
+{
+  "source_question_id": "q_motor_instability",
+  "target_question_id": "q_motor_instability",
+  "relation_type": "REINFORCES",
+  "weight": 0.5
+}

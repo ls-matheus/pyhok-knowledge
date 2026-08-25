@@ -1,0 +1,10 @@
+{
+  "id": "sig_test_pointer_velocity",
+  "kind": "RAW",
+  "source": "pointer",
+  "data_type": "scalar",
+  "unit": "pixels_per_second",
+  "temporal_window_ms": 0,
+  "privacy_level": "ANONYMOUS_METRIC",
+  "quality_metric_id": "sig_test_pointer_quality"
+}

@@ -1,0 +1,6 @@
+{
+  "source_question_id": "q_test_motor_change",
+  "target_question_id": "q_test_motor_change",
+  "relation_type": "REINFORCES",
+  "weight": 0.5
+}

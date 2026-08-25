@@ -1,0 +1,45 @@
+{
+  "proposal_id": "proposal_test_001",
+  "generator": {
+    "type": "llm",
+    "provider": "test",
+    "model": "mock-model",
+    "model_version": "0.0.0"
+  },
+  "reason": "Teste controlado de proposta automática de nova hipótese.",
+  "changes": {
+    "signals": [],
+    "questions": [
+      {
+        "id": "q_ai_generated_test",
+        "hypothesis": "Uma alteração persistente no padrão de interação pode representar uma mudança no estado operacional.",
+        "required_signals": [
+          "sig_pointer_velocity",
+          "sig_pointer_variance_2s"
+        ],
+        "evaluation_trigger": {
+          "logical_operator": "AND",
+          "rules": [
+            {
+              "signal_id": "sig_pointer_variance_2s",
+              "operator": ">",
+              "threshold": 0.80,
+              "window_ms": 3000
+            }
+          ]
+        },
+        "evidence_model": {
+          "base_strength": 0.65,
+          "decay_rate_per_sec": 0.10
+        },
+        "cortex_weights": {
+          "focus": -0.3,
+          "stress": 0.4,
+          "autonomy": -0.1,
+          "fatigue": 0.2
+        }
+      }
+    ],
+    "relations": []
+  }
+}
