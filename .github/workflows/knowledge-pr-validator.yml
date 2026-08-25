@@ -1,0 +1,188 @@
+name: PyHok Knowledge PR Validator
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  validate:
+    if: startsWith(github.head_ref, 'agent/evolution-')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install jsonschema
+
+      - name: Validate proposal structure
+        run: |
+          python validators/validate_proposal.py
+
+      - name: Validate repository JSON
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          files = list(Path("data").rglob("*.json"))
+
+          for path in files:
+              json.loads(
+                  path.read_text(encoding="utf-8")
+              )
+              print("OK:", path)
+
+          print(f"Validated {len(files)} JSON files.")
+          PY
+
+      - name: Validate question schemas
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from jsonschema import Draft7Validator
+
+          schema_path = Path(
+              "schemas/v2/question.schema.json"
+          )
+
+          schema = json.loads(
+              schema_path.read_text(
+                  encoding="utf-8"
+              )
+          )
+
+          validator = Draft7Validator(schema)
+
+          for path in Path("data/questions").glob("*.json"):
+              data = json.loads(
+                  path.read_text(
+                      encoding="utf-8"
+                  )
+              )
+
+              errors = list(
+                  validator.iter_errors(data)
+              )
+
+              if errors:
+                  print(
+                      f"FAILED: {path}"
+                  )
+
+                  for error in errors:
+                      print(
+                          "-", error.message
+                      )
+
+                  raise SystemExit(1)
+
+              print("OK:", path)
+
+          print("All questions passed schema validation.")
+          PY
+
+      - name: Validate method references
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          methods = json.loads(
+              Path(
+                  "generator/methods/methods.json"
+              ).read_text()
+          )
+
+          supported = {
+              (
+                  m["method_id"],
+                  m["version"]
+              )
+              for m in methods["methods"]
+              if m["status"] == "SUPPORTED"
+          }
+
+          for path in Path("data/questions").glob("*.json"):
+              question = json.loads(
+                  path.read_text()
+              )
+
+              model = question["evaluation_model"]
+
+              key = (
+                  model["method_id"],
+                  model["version"]
+              )
+
+              if key not in supported:
+                  raise SystemExit(
+                      f"Unsupported method in {path}: {key}"
+                  )
+
+          print("All evaluation methods are supported.")
+          PY
+
+      - name: Validate graph references
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          question_ids = {
+              json.loads(
+                  path.read_text()
+              )["id"]
+              for path in Path(
+                  "data/questions"
+              ).glob("*.json")
+          }
+
+          for path in Path(
+              "data/relations"
+          ).glob("*.json"):
+
+              relation = json.loads(
+                  path.read_text()
+              )
+
+              if relation["source_question_id"] not in question_ids:
+                  raise SystemExit(
+                      f"Unknown source question: {path}"
+                  )
+
+              if relation["target_question_id"] not in question_ids:
+                  raise SystemExit(
+                      f"Unknown target question: {path}"
+                  )
+
+          print("Graph references are valid.")
+          PY
+
+      - name: Merge approved PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr merge \
+            "${{ github.event.pull_request.number }}" \
+            --squash \
+            --delete-branch

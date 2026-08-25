@@ -1,0 +1,52 @@
+{
+  "policy_id": "pyhok_evolution_policy",
+  "policy_version": "1.0.0",
+  "status": "ACTIVE",
+
+  "scheduler": {
+    "enabled": true,
+    "timezone": "America/Sao_Paulo",
+    "start": "02:00",
+    "end": "04:00",
+    "tick_minutes": 15
+  },
+
+  "limits": {
+    "max_proposals_per_run": 3,
+    "max_iterations_per_run": 3,
+    "max_consecutive_rejections": 2,
+    "minimum_novelty_score": 0.70,
+    "minimum_coverage_gain": 0.15,
+    "minimum_confidence_in_proposal": 0.80
+  },
+
+  "allowed_proposal_types": [
+    "QUESTION_CREATE",
+    "QUESTION_UPDATE",
+    "RELATION_CREATE"
+  ],
+
+  "rules": {
+    "agent_may_modify_runtime": false,
+    "agent_may_modify_policy": false,
+    "agent_may_modify_schema": false,
+    "agent_may_create_method": false,
+    "agent_may_create_unknown_signal": false,
+    "agent_may_publish_without_validation": false,
+
+    "require_existing_signal": true,
+    "require_supported_method": true,
+    "require_unique_question_id": true,
+    "require_graph_consistency": true,
+    "require_mission_alignment": true,
+    "require_structured_justification": true
+  },
+
+  "stop_conditions": [
+    "window_closed",
+    "proposal_limit_reached",
+    "iteration_limit_reached",
+    "consecutive_rejection_limit_reached",
+    "no_useful_change"
+  ]
+}
