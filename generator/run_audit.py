@@ -6,6 +6,7 @@ from pathlib import Path
 from google import genai
 from google.genai import types
 
+
 ROOT = Path(__file__).resolve().parents[1]
 
 API_KEY = os.environ.get("GEMINI_API_KEY")
@@ -15,21 +16,62 @@ CONTEXT_FILE = ROOT / "generator/input/agent_context.json"
 PROMPT_FILE = ROOT / "prompts/01_graph_auditor.system.txt"
 OUTPUT_FILE = ROOT / "generator/output/audit.json"
 
+
+def build_context_if_needed():
+    if CONTEXT_FILE.exists():
+        return
+
+    print("Building agent context...")
+
+    import subprocess
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "generator/build_agent_context.py")
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True
+    )
+
+    print(result.stdout)
+
+    if result.returncode != 0:
+        print(result.stderr)
+        raise SystemExit(
+            "Failed to build agent context."
+        )
+
+
 if not API_KEY:
-    print("ERROR: GEMINI_API_KEY is missing.")
-    sys.exit(1)
+    raise SystemExit(
+        "GEMINI_API_KEY is missing."
+    )
+
+build_context_if_needed()
+
+if not CONTEXT_FILE.exists():
+    raise SystemExit(
+        f"Context not found: {CONTEXT_FILE}"
+    )
 
 context = json.loads(
-    CONTEXT_FILE.read_text(encoding="utf-8")
+    CONTEXT_FILE.read_text(
+        encoding="utf-8"
+    )
 )
 
 system_prompt = PROMPT_FILE.read_text(
     encoding="utf-8"
 )
 
-audit_schema = {
+response_schema = {
     "type": "object",
-    "required": ["status", "opportunities"],
+    "required": [
+        "status",
+        "opportunities"
+    ],
     "properties": {
         "status": {
             "type": "string",
@@ -40,7 +82,6 @@ audit_schema = {
         },
         "opportunities": {
             "type": "array",
-            "maxItems": 3,
             "items": {
                 "type": "object",
                 "required": [
@@ -70,30 +111,30 @@ audit_schema = {
                     },
                     "existing_questions": {
                         "type": "array",
-                        "items": {"type": "string"}
+                        "items": {
+                            "type": "string"
+                        }
                     },
                     "available_signals": {
                         "type": "array",
-                        "items": {"type": "string"}
+                        "items": {
+                            "type": "string"
+                        }
                     },
                     "available_methods": {
                         "type": "array",
-                        "items": {"type": "string"}
+                        "items": {
+                            "type": "string"
+                        }
                     },
                     "estimated_novelty": {
-                        "type": "number",
-                        "minimum": 0,
-                        "maximum": 1
+                        "type": "number"
                     },
                     "estimated_coverage_gain": {
-                        "type": "number",
-                        "minimum": 0,
-                        "maximum": 1
+                        "type": "number"
                     },
                     "priority": {
-                        "type": "number",
-                        "minimum": 0,
-                        "maximum": 1
+                        "type": "number"
                     }
                 }
             }
@@ -104,26 +145,35 @@ audit_schema = {
 prompt = f"""
 Audit the current PyHok Knowledge Graph.
 
-Do not create a question.
-Do not create a relation.
-Do not modify anything.
+Do not create knowledge.
+Do not modify the repository.
+Do not invent missing entities.
 
-Find at most three defensible opportunities for evolution.
+Use only the supplied repository context.
 
-Repository:
+Repository context:
 
-{json.dumps(context, ensure_ascii=False, indent=2)}
+{json.dumps(
+    context,
+    ensure_ascii=False,
+    indent=2
+)}
 
-Return JSON only.
-If no useful change exists, return:
+Identify at most three useful opportunities.
+
+If no useful evolution exists, return:
 
 {{
   "status": "NO_USEFUL_CHANGE",
   "opportunities": []
 }}
+
+Return JSON only.
 """
 
-client = genai.Client(api_key=API_KEY)
+client = genai.Client(
+    api_key=API_KEY
+)
 
 response = client.models.generate_content(
     model=MODEL,
@@ -131,22 +181,40 @@ response = client.models.generate_content(
     config=types.GenerateContentConfig(
         system_instruction=system_prompt,
         response_mime_type="application/json",
-        response_schema=audit_schema,
+        response_schema=response_schema,
         temperature=0.0
     )
 )
 
 try:
-    result = json.loads(response.text)
+    result = json.loads(
+        response.text
+    )
 except json.JSONDecodeError as exc:
-    print("ERROR: invalid Gemini JSON:", exc)
-    sys.exit(1)
+    print(response.text)
+    raise SystemExit(
+        f"Gemini returned invalid JSON: {exc}"
+    )
 
-OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+OUTPUT_FILE.parent.mkdir(
+    parents=True,
+    exist_ok=True
+)
 
 OUTPUT_FILE.write_text(
-    json.dumps(result, ensure_ascii=False, indent=2) + "\n",
+    json.dumps(
+        result,
+        ensure_ascii=False,
+        indent=2
+    ) + "\n",
     encoding="utf-8"
 )
 
-print(json.dumps(result, ensure_ascii=False, indent=2))
+print("=== AUDIT RESULT ===")
+print(
+    json.dumps(
+        result,
+        ensure_ascii=False,
+        indent=2
+    )
+)
