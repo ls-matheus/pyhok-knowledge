@@ -30,3 +30,10 @@ jobs:
 
       - name: Display generated result
         run: cat generator/output/generated_question.json
+
+      - name: Upload generated hypothesis
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-question
+          path: generator/output/generated_question.json
+          retention-days: 7
