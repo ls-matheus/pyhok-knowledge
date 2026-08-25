@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PyHokEvaluationMethod",
+  "type": "object",
+  "required": [
+    "method_id",
+    "version",
+    "parameters"
+  ],
+  "properties": {
+    "method_id": {
+      "type": "string",
+      "pattern": "^method_[a-z0-9_]+$"
+    },
+    "version": {
+      "type": "string"
+    },
+    "parameters": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,8 @@
+{
+  "question_id": "q_pointer_velocity_deviation",
+  "timestamp_ms": 1750000000000,
+  "activated": true,
+  "evidence": 0.78,
+  "signal_quality": 0.94,
+  "effective_evidence": 0.7332
+}
