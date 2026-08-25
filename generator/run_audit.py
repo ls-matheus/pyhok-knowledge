@@ -11,42 +11,12 @@ ROOT = Path(__file__).resolve().parents[1]
 API_KEY = os.environ.get("GEMINI_API_KEY")
 MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 
-CONTEXT_FILE = ROOT / "generator/output/current_context.json"
+CONTEXT_FILE = ROOT / "generator/input/agent_context.json"
 PROMPT_FILE = ROOT / "prompts/01_graph_auditor.system.txt"
 OUTPUT_FILE = ROOT / "generator/output/audit.json"
 
 if not API_KEY:
     print("ERROR: GEMINI_API_KEY is missing.")
-    sys.exit(1)
-
-# O contexto é um artefato de execução.
-# Nunca dependemos dele existir no Git.
-if not CONTEXT_FILE.exists():
-    print("Context file not found. Building repository context...")
-
-    import subprocess
-
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(ROOT / "generator/build_context.py")
-        ],
-        cwd=ROOT,
-        capture_output=True,
-        text=True
-    )
-
-    print(result.stdout)
-
-    if result.returncode != 0:
-        print(result.stderr)
-        print("ERROR: failed to build repository context.")
-        sys.exit(1)
-
-if not CONTEXT_FILE.exists():
-    print(
-        f"ERROR: context still does not exist: {CONTEXT_FILE}"
-    )
     sys.exit(1)
 
 context = json.loads(

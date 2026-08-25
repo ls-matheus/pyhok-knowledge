@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 API_KEY = os.environ.get("GEMINI_API_KEY")
 MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 
-CONTEXT_FILE = ROOT / "generator/output/current_context.json"
+CONTEXT_FILE = ROOT / "generator/input/agent_context.json"
 AUDIT_FILE = ROOT / "generator/output/audit.json"
 PROMPT_FILE = ROOT / "prompts/02_proposal_generator.system.txt"
 OUTPUT_FILE = ROOT / "generator/output/proposal.json"
