@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pyhok.org/schema/v2/privacy.schema.json",
+  "title": "PyHokSignalPrivacy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "classification",
+    "local_only",
+    "retention"
+  ],
+  "properties": {
+    "classification": {
+      "type": "string",
+      "enum": [
+        "ANONYMOUS_METRIC",
+        "EPHEMERAL_GEOMETRY",
+        "SENSITIVE_LOCAL_ONLY"
+      ]
+    },
+    "local_only": {
+      "type": "boolean"
+    },
+    "retention": {
+      "type": "string",
+      "enum": [
+        "NONE",
+        "SESSION",
+        "LOCAL_PERSISTENT"
+      ]
+    }
+  }
+}

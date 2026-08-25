@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pyhok.org/schema/v2/quality.schema.json",
+  "title": "PyHokSignalQuality",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "metric_id",
+    "minimum_acceptable",
+    "missing_is_zero"
+  ],
+  "properties": {
+    "metric_id": {
+      "type": "string",
+      "pattern": "^(sig|self)_[a-z0-9_]+$"
+    },
+    "minimum_acceptable": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "missing_is_zero": {
+      "type": "boolean"
+    }
+  }
+}

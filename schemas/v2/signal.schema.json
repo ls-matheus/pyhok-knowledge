@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pyhok.org/schema/v2/signal.schema.json",
+  "title": "PyHokSignalDefinition",
+  "description": "Extensible contract for observable signals used by the PyHok/Sinapse system.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "kind",
+    "source",
+    "data_type",
+    "unit",
+    "temporal_window_ms",
+    "quality",
+    "privacy"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^sig_[a-z0-9_]+$"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "RAW",
+        "NORMALIZED",
+        "DERIVED",
+        "TEMPORAL_FEATURE"
+      ]
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "data_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "unit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "temporal_window_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "dependencies": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^sig_[a-z0-9_]+$"
+      }
+    },
+    "feature_method_id": {
+      "type": "string",
+      "pattern": "^method_[a-z0-9_]+$"
+    },
+    "quality": {
+      "$ref": "quality.schema.json"
+    },
+    "privacy": {
+      "$ref": "privacy.schema.json"
+    },
+    "metadata": {
+      "type": "object"
+    }
+  }
+}
