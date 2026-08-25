@@ -94,7 +94,12 @@ jobs:
           git config user.name "PyHok Knowledge Agent"
           git config user.email "actions@github.com"
 
-          git add data/questions
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No knowledge changes were produced by the proposal."
+            exit 0
+          fi
 
           git commit \
             -m "agent: propose knowledge evolution"
