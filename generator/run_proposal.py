@@ -61,7 +61,6 @@ selected = max(
 
 proposal_schema = {
     "type": "object",
-    "additionalProperties": False,
     "required": ["status"],
     "properties": {
         "status": {
@@ -73,7 +72,6 @@ proposal_schema = {
         },
         "proposal": {
             "type": "object",
-            "additionalProperties": False,
             "required": [
                 "proposal_id",
                 "proposal_type",

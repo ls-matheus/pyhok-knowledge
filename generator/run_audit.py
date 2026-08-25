@@ -29,7 +29,6 @@ system_prompt = PROMPT_FILE.read_text(
 
 audit_schema = {
     "type": "object",
-    "additionalProperties": False,
     "required": ["status", "opportunities"],
     "properties": {
         "status": {
@@ -44,7 +43,6 @@ audit_schema = {
             "maxItems": 3,
             "items": {
                 "type": "object",
-                "additionalProperties": False,
                 "required": [
                     "opportunity_id",
                     "type",
