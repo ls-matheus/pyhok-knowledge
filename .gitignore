@@ -7,3 +7,6 @@ venv/
 .idea/
 .vscode/
 generator/input/agent_context.json
+
+# Generated agent runtime artifacts
+generator/output/
