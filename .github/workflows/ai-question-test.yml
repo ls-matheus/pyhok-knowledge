@@ -28,10 +28,17 @@ jobs:
           GEMINI_MODEL: gemini-3.6-flash
         run: python generator/generate_question.py
 
-      - name: Find generated question
+      - name: Locate generated question
         id: generated
         run: |
-          FILE=$(find generator/output/questions -maxdepth 1 -name 'q_*.json' -type f | sort | tail -n 1)
+          FILE=$(find generator/output/questions \
+            -maxdepth 1 \
+            -type f \
+            -name 'q_*.json' \
+            -printf '%T@ %p\n' \
+            | sort -n \
+            | tail -n 1 \
+            | cut -d' ' -f2-)
 
           if [ -z "$FILE" ]; then
             echo "No generated question found."
@@ -39,7 +46,7 @@ jobs:
           fi
 
           echo "file=$FILE" >> "$GITHUB_OUTPUT"
-          echo "Generated file: $FILE"
+          echo "Generated: $FILE"
 
       - name: Validate Question Schema
         env:
@@ -70,10 +77,8 @@ jobs:
 
           if errors:
               print("QUESTION SCHEMA VALIDATION: FAILED")
-
               for error in errors:
                   print("-", error.message)
-
               raise SystemExit(1)
 
           print("QUESTION SCHEMA VALIDATION: PASSED")
@@ -88,25 +93,24 @@ jobs:
           import os
           from pathlib import Path
 
-          question_path = Path(os.environ["QUESTION_FILE"])
           question = json.loads(
-              question_path.read_text(encoding="utf-8")
+              Path(os.environ["QUESTION_FILE"]).read_text(
+                  encoding="utf-8"
+              )
           )
 
-          signals_dir = Path("data/signals")
+          available = set()
 
-          available_signals = set()
-
-          for path in signals_dir.glob("*.json"):
+          for path in Path("data/signals").glob("*.json"):
               signal = json.loads(
                   path.read_text(encoding="utf-8")
               )
-              available_signals.add(signal["id"])
+              available.add(signal["id"])
 
           errors = []
 
           for signal_id in question["required_signals"]:
-              if signal_id not in available_signals:
+              if signal_id not in available:
                   errors.append(
                       f"Unknown required signal: {signal_id}"
                   )
@@ -114,17 +118,15 @@ jobs:
           for rule in question["evaluation_trigger"]["rules"]:
               signal_id = rule["signal_id"]
 
-              if signal_id not in available_signals:
+              if signal_id not in available:
                   errors.append(
                       f"Unknown trigger signal: {signal_id}"
                   )
 
           if errors:
               print("SIGNAL REFERENCE VALIDATION: FAILED")
-
               for error in errors:
                   print("-", error)
-
               raise SystemExit(1)
 
           print("SIGNAL REFERENCE VALIDATION: PASSED")
@@ -140,29 +142,89 @@ jobs:
           from pathlib import Path
 
           question = json.loads(
-              Path(os.environ["QUESTION_FILE"]).read_text()
+              Path(os.environ["QUESTION_FILE"]).read_text(
+                  encoding="utf-8"
+              )
           )
 
           methods = json.loads(
-              Path("generator/methods/methods.json").read_text()
+              Path("generator/methods/methods.json").read_text(
+                  encoding="utf-8"
+              )
           )
 
           known = {
-              method["method_id"]
+              method["method_id"]: method["version"]
               for method in methods["methods"]
           }
 
-          method_id = question["evaluation_model"]["method_id"]
+          evaluation_model = question.get("evaluation_model")
+
+          if not evaluation_model:
+              print("Evaluation method missing.")
+              raise SystemExit(1)
+
+          method_id = evaluation_model["method_id"]
+          method_version = evaluation_model["version"]
 
           if method_id not in known:
+              print(f"Unknown evaluation method: {method_id}")
+              raise SystemExit(1)
+
+          if method_version != known[method_id]:
               print(
-                  f"Unknown evaluation method: {method_id}"
+                  f"Unsupported method version: "
+                  f"{method_id} {method_version}"
               )
               raise SystemExit(1)
 
           print(
-              f"EVALUATION METHOD VALIDATION: PASSED ({method_id})"
+              "EVALUATION METHOD VALIDATION: PASSED "
+              f"({method_id} v{method_version})"
           )
+          PY
+
+      - name: Validate Baseline Semantics
+        env:
+          QUESTION_FILE: ${{ steps.generated.outputs.file }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          question = json.loads(
+              Path(os.environ["QUESTION_FILE"]).read_text(
+                  encoding="utf-8"
+              )
+          )
+
+          hypothesis = question["hypothesis"].lower()
+          method_id = question["evaluation_model"]["method_id"]
+
+          baseline_terms = [
+              "baseline",
+              "linha de base",
+              "linha-base",
+              "personal baseline"
+          ]
+
+          mentions_baseline = any(
+              term in hypothesis
+              for term in baseline_terms
+          )
+
+          if mentions_baseline and method_id != "method_baseline_deviation":
+              print(
+                  "SEMANTIC VALIDATION: FAILED"
+              )
+              print(
+                  "Hypothesis references a baseline but does not use "
+                  "method_baseline_deviation."
+              )
+              raise SystemExit(1)
+
+          print("BASELINE SEMANTIC VALIDATION: PASSED")
           PY
 
       - name: Show generated question
@@ -170,7 +232,7 @@ jobs:
           QUESTION_FILE: ${{ steps.generated.outputs.file }}
         run: cat "$QUESTION_FILE"
 
-      - name: Commit generated hypothesis
+      - name: Commit approved hypothesis
         env:
           QUESTION_FILE: ${{ steps.generated.outputs.file }}
         run: |

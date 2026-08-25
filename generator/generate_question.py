@@ -53,6 +53,12 @@ STRICT RULES:
 10. Do not add explanatory text.
 11. The hypothesis may refer to a baseline only if the selected
     evaluation method supports baseline comparison.
+12. evaluation_model is MANDATORY.
+13. method_id MUST be selected from available_methods.
+14. NEVER omit evaluation_model.
+15. If the hypothesis refers to "baseline", "deviation from baseline",
+    "personal baseline", or equivalent semantics, prefer
+    method_baseline_deviation.
 
 Required JSON structure:
 
@@ -133,6 +139,38 @@ except json.JSONDecodeError as exc:
     print("ERROR: Gemini did not return valid JSON.")
     print(text)
     raise SystemExit(1) from exc
+
+required_fields = [
+    "id",
+    "hypothesis",
+    "required_signals",
+    "evaluation_trigger",
+    "evaluation_model",
+    "evidence_model",
+    "cortex_weights",
+]
+
+missing = [
+    field for field in required_fields
+    if field not in result
+]
+
+if missing:
+    print("ERROR: generated question is missing required fields:")
+    for field in missing:
+        print(f"- {field}")
+    sys.exit(1)
+
+evaluation_model = result["evaluation_model"]
+
+if not isinstance(evaluation_model, dict):
+    print("ERROR: evaluation_model must be an object.")
+    sys.exit(1)
+
+for field in ("method_id", "version", "parameters"):
+    if field not in evaluation_model:
+        print(f"ERROR: evaluation_model missing field: {field}")
+        sys.exit(1)
 
 question_id = result.get("id", "")
 
