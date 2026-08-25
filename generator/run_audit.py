@@ -19,6 +19,36 @@ if not API_KEY:
     print("ERROR: GEMINI_API_KEY is missing.")
     sys.exit(1)
 
+# O contexto é um artefato de execução.
+# Nunca dependemos dele existir no Git.
+if not CONTEXT_FILE.exists():
+    print("Context file not found. Building repository context...")
+
+    import subprocess
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "generator/build_context.py")
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True
+    )
+
+    print(result.stdout)
+
+    if result.returncode != 0:
+        print(result.stderr)
+        print("ERROR: failed to build repository context.")
+        sys.exit(1)
+
+if not CONTEXT_FILE.exists():
+    print(
+        f"ERROR: context still does not exist: {CONTEXT_FILE}"
+    )
+    sys.exit(1)
+
 context = json.loads(
     CONTEXT_FILE.read_text(encoding="utf-8")
 )
