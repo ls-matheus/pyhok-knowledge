@@ -10,7 +10,7 @@ from google.genai import types
 ROOT = Path(__file__).resolve().parents[1]
 
 API_KEY = os.environ.get("GEMINI_API_KEY")
-MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
+MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-flash-preview")
 
 CONTEXT_FILE = ROOT / "generator/input/agent_context.json"
 AUDIT_FILE = ROOT / "generator/output/audit.json"

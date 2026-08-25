@@ -20,7 +20,7 @@ CANONICAL_SCHEMA_FILE = ROOT / "schemas/v2/question.schema.json"
 OUTPUT_DIR = ROOT / "generator/output/questions"
 
 API_KEY = os.environ.get("GEMINI_API_KEY")
-MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
+MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-flash-preview")
 
 if not API_KEY:
     print("ERROR: GEMINI_API_KEY is not configured.")
