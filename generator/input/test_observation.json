@@ -1,0 +1,10 @@
+{
+  "observation_id": "obs_test_001",
+  "description": "Durante uma interação simulada, foi observada uma alteração persistente na variabilidade da trajetória do ponteiro em comparação com a linha de base local.",
+  "available_signals": [
+    "sig_test_pointer_velocity"
+  ],
+  "context": {
+    "test_only": true
+  }
+}
