@@ -251,6 +251,7 @@ def test_terminal_no_silent_mutation_guard_detects_dirty_main(tmp_path, monkeypa
         policy_path=policy_file,
         ledger_path=tmp_path / "ledger.jsonl",
         manifests_dir=tmp_path / "manifests",
+        evaluations_path=tmp_path / "evaluations.jsonl",
         skip_git=False,
         skip_preflight=True,
         force_window=True,

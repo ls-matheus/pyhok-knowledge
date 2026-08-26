@@ -53,6 +53,7 @@ def run_subcommand(cmd: list[str], cwd: Path = ROOT) -> tuple[int, str, str]:
 
 LEDGER_FILE = ROOT / "evolution/ledger.jsonl"
 MANIFESTS_DIR = ROOT / "evolution/manifests"
+EVALUATIONS_FILE = ROOT / "evolution/post_evaluations.jsonl"
 
 
 class EvolutionOrchestrator:
@@ -61,6 +62,7 @@ class EvolutionOrchestrator:
         policy_path: Path = POLICY_FILE,
         ledger_path: Path | None = None,
         manifests_dir: Path | None = None,
+        evaluations_path: Path | None = None,
         dry_run: bool = False,
         skip_git: bool = False,
         force_window: bool = False,
@@ -70,6 +72,7 @@ class EvolutionOrchestrator:
         self.policy_path = policy_path
         self.ledger_path = ledger_path or LEDGER_FILE
         self.manifests_dir = manifests_dir or MANIFESTS_DIR
+        self.evaluations_path = evaluations_path or EVALUATIONS_FILE
         self.dry_run = dry_run
         self.skip_git = skip_git
         self.force_window = force_window
@@ -246,7 +249,7 @@ class EvolutionOrchestrator:
                 proposal=prop,
                 state_after=resulting_state
             )
-            attach_post_evaluation(cycle_id=cycle_id, evaluation_result=post_eval)
+            attach_post_evaluation(cycle_id=cycle_id, evaluation_result=post_eval, evaluations_path=self.evaluations_path)
 
             # 16. Create Cycle Manifest (Recorded ON the feature branch before committing)
             predicted_metrics = {
