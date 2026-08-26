@@ -51,10 +51,16 @@ def run_subcommand(cmd: list[str], cwd: Path = ROOT) -> tuple[int, str, str]:
     return res.returncode, res.stdout, res.stderr
 
 
+LEDGER_FILE = ROOT / "evolution/ledger.jsonl"
+MANIFESTS_DIR = ROOT / "evolution/manifests"
+
+
 class EvolutionOrchestrator:
     def __init__(
         self,
         policy_path: Path = POLICY_FILE,
+        ledger_path: Path | None = None,
+        manifests_dir: Path | None = None,
         dry_run: bool = False,
         skip_git: bool = False,
         force_window: bool = False,
@@ -62,6 +68,8 @@ class EvolutionOrchestrator:
         runner_fn: Callable[[list[str]], tuple[int, str, str]] = run_subcommand,
     ):
         self.policy_path = policy_path
+        self.ledger_path = ledger_path or LEDGER_FILE
+        self.manifests_dir = manifests_dir or MANIFESTS_DIR
         self.dry_run = dry_run
         self.skip_git = skip_git
         self.force_window = force_window
@@ -196,7 +204,8 @@ class EvolutionOrchestrator:
             record_shadow_candidate(
                 cycle_id=cycle_id,
                 proposal_data=proposal_data,
-                initial_state_hash=initial_state_hash
+                initial_state_hash=initial_state_hash,
+                ledger_path=self.ledger_path
             )
 
             # 12. Workspace Branch Isolation & Publishing
@@ -239,7 +248,30 @@ class EvolutionOrchestrator:
             )
             attach_post_evaluation(cycle_id=cycle_id, evaluation_result=post_eval)
 
-            # 16. Git Commit, Push & PR Lifecycle
+            # 16. Create Cycle Manifest (Recorded ON the feature branch before committing)
+            predicted_metrics = {
+                "novelty_score": float(prop.get("novelty_score", 0.85)),
+                "coverage_gain": float(prop.get("coverage_gain", 0.20)),
+                "confidence": float(confidence),
+            }
+
+            create_cycle_manifest(
+                cycle_id=cycle_id,
+                main_before_sha=main_before_sha,
+                state_before_hash=initial_state_hash,
+                state_after_hash=resulting_state_hash,
+                proposal_hash=hash_proposal(prop),
+                dataset_counts_before=dataset_counts_before,
+                dataset_counts_after=dataset_counts_after,
+                predicted_metrics=predicted_metrics,
+                observed_metrics=post_eval.get("observed", {}),
+                gate_verdict={"valid": True, "safe": True, "classification": "PREDICTED_IMPROVEMENT"},
+                action_taken="SHADOW_RECORDED",
+                timestamp_start=timestamp_start,
+                manifests_dir=self.manifests_dir
+            )
+
+            # 17. Git Commit, Push & PR Lifecycle
             if not self.skip_git:
                 self.runner(["git", "add", "-A"])
                 code, diff_out, _ = self.runner(["git", "diff", "--cached", "--quiet"])
@@ -283,37 +315,13 @@ class EvolutionOrchestrator:
                     log("AUTO_MERGE", "Auto-merge enabled. Requesting PR squash merge...")
                     self.runner(["gh", "pr", "merge", branch_name, "--squash", "--delete-branch"])
                 else:
-                    log("AUTO_MERGE", "Auto-merge disabled (Shadow Mode). PR left for observation.")
-                    # Return to main and verify No-Silent-Mutation Guard on main
+                    log("AUTO_MERGE", "Auto-merge disabled (Shadow Mode). Returning main to clean state...")
+                    # Return to main
                     self.runner(["git", "checkout", "main"])
-                    state_on_main = hash_knowledge_state()
-                    if state_on_main != initial_state_hash:
-                        raise RuntimeError("SHADOW_MUTATION_DETECTED: Dataset on main was mutated during shadow observation")
 
-            # 17. Create Cycle Manifest
             question_id = prop.get("question", {}).get("id") or prop.get("question", {}).get("question_id")
 
-            predicted_metrics = {
-                "novelty_score": float(prop.get("novelty_score", 0.85)),
-                "coverage_gain": float(prop.get("coverage_gain", 0.20)),
-                "confidence": float(confidence),
-            }
-
-            create_cycle_manifest(
-                cycle_id=cycle_id,
-                main_before_sha=main_before_sha,
-                state_before_hash=initial_state_hash,
-                state_after_hash=resulting_state_hash,
-                proposal_hash=hash_proposal(prop),
-                dataset_counts_before=dataset_counts_before,
-                dataset_counts_after=dataset_counts_after,
-                predicted_metrics=predicted_metrics,
-                observed_metrics=post_eval.get("observed", {}),
-                gate_verdict={"valid": True, "safe": True, "classification": "PREDICTED_IMPROVEMENT"},
-                action_taken="SHADOW_RECORDED",
-                timestamp_start=timestamp_start
-            )
-
+            # 18. Record State Success
             record_success(
                 cycle_id=cycle_id,
                 opportunity_id=opportunity_id,
@@ -329,6 +337,23 @@ class EvolutionOrchestrator:
                     "proposal_commit_sha": proposal_commit_sha
                 }
             )
+
+            # 19. TERMINAL NO-SILENT-MUTATION GUARD (Executes AFTER ALL writes have completed)
+            if not self.skip_git and not is_auto_merge_enabled():
+                log("TERMINAL_GUARD", "Executing Terminal No-Silent-Mutation Guard on main...")
+                state_on_main = hash_knowledge_state()
+                if state_on_main != initial_state_hash:
+                    raise RuntimeError(f"TERMINAL_MUTATION_DETECTED: Dataset hash on main ({state_on_main}) != initial hash ({initial_state_hash})")
+
+                code_status, diff_data, _ = self.runner(["git", "status", "--porcelain", "data/"])
+                if code_status == 0 and diff_data.strip():
+                    raise RuntimeError(f"TERMINAL_MUTATION_DETECTED: data/ directory is dirty on main:\n{diff_data}")
+
+                code_head, head_after, _ = self.runner(["git", "rev-parse", "HEAD"])
+                if code_head == 0 and head_after.strip() != main_before_sha:
+                    raise RuntimeError(f"TERMINAL_MUTATION_DETECTED: main HEAD SHA moved ({head_after.strip()}) != before ({main_before_sha})")
+                log("TERMINAL_GUARD", "Terminal No-Silent-Mutation Guard: PASS (main is 100% untouched)")
+
             log("SUCCESS", f"Evolution cycle {cycle_id} completed successfully!")
             return {
                 "status": "SUCCESS",

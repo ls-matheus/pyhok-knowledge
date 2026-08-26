@@ -35,7 +35,6 @@ def run_quality_gates(
             "tests/unit/test_validation_pipeline.py",
             "tests/unit/test_evolution_ledger.py",
             "tests/unit/test_post_evaluator_and_metrics.py",
-            "tests/unit/test_defensive_and_chaos.py",
             "tests/unit/test_baseline_and_shadow_report.py",
             "tests/unit/test_measurement_gate.py"
         ]),

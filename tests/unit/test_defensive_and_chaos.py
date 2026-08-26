@@ -153,6 +153,8 @@ def test_chaos_llm_api_failure_handled_gracefully(tmp_path, monkeypatch):
 
     orch = EvolutionOrchestrator(
         policy_path=policy_file,
+        ledger_path=tmp_path / "ledger.jsonl",
+        manifests_dir=tmp_path / "manifests",
         skip_git=True,
         skip_preflight=True,
         force_window=True,
@@ -199,6 +201,8 @@ def test_chaos_quality_gate_failure_aborts_cycle(tmp_path, monkeypatch):
 
     orch = EvolutionOrchestrator(
         policy_path=policy_file,
+        ledger_path=tmp_path / "ledger.jsonl",
+        manifests_dir=tmp_path / "manifests",
         skip_git=True,
         skip_preflight=True,
         force_window=True,
@@ -207,3 +211,51 @@ def test_chaos_quality_gate_failure_aborts_cycle(tmp_path, monkeypatch):
     res = orch.execute_cycle()
     assert res["status"] == "FAILED"
     assert "Quality gates failed" in res["error"]
+
+
+def test_terminal_no_silent_mutation_guard_detects_dirty_main(tmp_path, monkeypatch):
+    status_file = tmp_path / "status.json"
+    proposal_file = tmp_path / "proposal.json"
+    proposal_file.write_text(json.dumps({
+        "status": "PROPOSAL_READY",
+        "proposal": {
+            "proposal_id": "prop_test_mutation",
+            "opportunity_id": "opp_test",
+            "confidence": 0.90,
+            "novelty_score": 0.85,
+            "coverage_gain": 0.20
+        }
+    }))
+
+    import scheduler.state as state_mod
+    monkeypatch.setattr(state_mod, "STATUS_FILE", status_file)
+    import scheduler.orchestrator as orch_mod
+    monkeypatch.setattr(orch_mod, "PROPOSAL_OUTPUT_FILE", proposal_file)
+
+    policy_file = tmp_path / "policy.json"
+    policy_file.write_text(json.dumps({
+        "scheduler": {"enabled": True, "timezone": "America/Sao_Paulo", "start": "00:00", "end": "23:59"}
+    }))
+
+    # Mock runner that simulates git checkout main and dirty data/ status
+    def mock_dirty_main_runner(cmd):
+        if "diff" in cmd and "--cached" in cmd:
+            return 1, "staged changes present", ""
+        if "status" in cmd and "data/" in cmd:
+            return 0, " M data/questions/q_corrupted.json\n", ""
+        if "rev-parse" in cmd:
+            return 0, "main_sha_123\n", ""
+        return 0, "OK", ""
+
+    orch = EvolutionOrchestrator(
+        policy_path=policy_file,
+        ledger_path=tmp_path / "ledger.jsonl",
+        manifests_dir=tmp_path / "manifests",
+        skip_git=False,
+        skip_preflight=True,
+        force_window=True,
+        runner_fn=mock_dirty_main_runner
+    )
+    res = orch.execute_cycle()
+    assert res["status"] == "FAILED"
+    assert "TERMINAL_MUTATION_DETECTED" in res["error"]
