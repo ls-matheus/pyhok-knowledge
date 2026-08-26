@@ -121,7 +121,41 @@
         }
       }
     ],
-    "questions": [],
+    "questions": [
+      {
+        "id": "q_motor_instability_pointer_velocity_deviation",
+        "hypothesis": "Variações na velocidade do ponteiro em relação à linha de base individual podem indicar alteração na dinâmica motora.",
+        "required_signals": [
+          "sig_test_pointer_velocity"
+        ],
+        "evaluation_trigger": {
+          "logical_operator": "AND",
+          "rules": [
+            {
+              "signal_id": "sig_test_pointer_velocity",
+              "operator": ">",
+              "threshold": 0.5,
+              "window_ms": 1000
+            }
+          ]
+        },
+        "evaluation_model": {
+          "method_id": "method_baseline_deviation",
+          "version": "1.0.0",
+          "parameters": {}
+        },
+        "evidence_model": {
+          "base_strength": 0.8,
+          "decay_rate_per_sec": 0.1
+        },
+        "cortex_weights": {
+          "focus": 0.0,
+          "stress": 0.3,
+          "autonomy": 0.0,
+          "fatigue": 0.2
+        }
+      }
+    ],
     "relations": [],
     "methods": [
       {
@@ -155,7 +189,7 @@
   },
   "derived_state": {
     "signal_count": 1,
-    "question_count": 0,
+    "question_count": 1,
     "relation_count": 0,
     "method_count": 3,
     "domains_with_questions": [],
@@ -171,7 +205,9 @@
       "stress",
       "temporal_dynamics"
     ],
-    "questions_without_relations": [],
+    "questions_without_relations": [
+      "q_motor_instability_pointer_velocity_deviation"
+    ],
     "relations_with_missing_targets": [],
     "questions_with_missing_signals": [],
     "questions_with_missing_methods": []

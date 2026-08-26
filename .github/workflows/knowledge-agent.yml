@@ -2,8 +2,7 @@ name: PyHok Knowledge Agent
 
 on:
   schedule:
-    - cron: "0,30 8-19 * * *"
-      timezone: "America/Sao_Paulo"
+    - cron: "0,30 11-23 * * *"
   workflow_dispatch:
 
 permissions:
@@ -31,7 +30,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install google-genai jsonschema
+          pip install google-genai jsonschema pytest
 
       - name: Check evolution window
         run: |
@@ -44,14 +43,14 @@ jobs:
       - name: Audit knowledge graph
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash-lite' }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.6-flash' }}
         run: |
           python generator/run_audit.py
 
       - name: Generate proposal
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash-lite' }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.6-flash' }}
         run: |
           python generator/run_proposal.py
 
@@ -59,10 +58,8 @@ jobs:
         run: |
           STATUS=$(python - <<'PY'
           import json
-
           with open("generator/output/proposal.json", encoding="utf-8") as f:
               data = json.load(f)
-
           print(data.get("status", "UNKNOWN"))
           PY
           )
@@ -87,6 +84,10 @@ jobs:
           git checkout -b "$BRANCH"
           echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
 
+      - name: Run quality gates on proposed knowledge
+        run: |
+          python scheduler/quality_gate.py
+
       - name: Commit proposed knowledge
         id: commit
         run: |
@@ -107,6 +108,7 @@ jobs:
 
       - name: Create pull request
         if: ${{ steps.commit.outputs.changed == 'true' }}
+        id: pr
         env:
           GH_TOKEN: ${{ github.token }}
           BRANCH: ${{ steps.branch.outputs.name }}
@@ -116,11 +118,12 @@ jobs:
 
           This branch MUST pass the full repository validation pipeline before merging.
 
-          The agent has no direct authority over main.
+          All 5 canonical quality gates verified prior to submission.
           EOF
 
-          gh pr create \
+          PR_URL=$(gh pr create \
             --base main \
             --head "$BRANCH" \
             --title "Agent Evolution: proposed knowledge update" \
-            --body-file /tmp/pr_body.md
+            --body-file /tmp/pr_body.md)
+          echo "url=$PR_URL" >> "$GITHUB_OUTPUT"
