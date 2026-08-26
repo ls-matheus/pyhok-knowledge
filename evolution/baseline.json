@@ -1,0 +1,32 @@
+{
+  "baseline_id": "baseline_n0",
+  "created_at": "2026-08-26T22:54:39.246445+00:00",
+  "main_sha": "1e992aeb32f7c362e1105530f42380c93656d01b",
+  "state_hash": "sha256:2cf7115c649d7b716393d340dc7a0b9d5f934ca0fe851340f01b02bdcd5b7040",
+  "counts": {
+    "questions": 1,
+    "signals": 1,
+    "relations": 0,
+    "methods": 3,
+    "total_domains": 10,
+    "covered_domains": 1,
+    "uncovered_domains": 9
+  },
+  "coverage": 0.1,
+  "graph_density": 0.0,
+  "redundancy": 0.0,
+  "known_gaps": [
+    "attention_disruption",
+    "sensory_overload",
+    "fatigue",
+    "stress",
+    "autonomy",
+    "communication_hesitation",
+    "temporal_dynamics",
+    "cross_modal_interaction",
+    "recovery_dynamics"
+  ],
+  "covered_domain_list": [
+    "motor_instability"
+  ]
+}
