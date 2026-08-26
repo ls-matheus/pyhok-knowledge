@@ -1,6 +1,6 @@
 {
   "id": "q_motor_instability_pointer_velocity_deviation",
-  "hypothesis": "Existe alteração observável no padrão da velocidade do ponteiro em relação à linha de base individual, compatível com instabilidade motora.",
+  "hypothesis": "Existe variação mensurável na velocidade do ponteiro em relação à linha de base individual compatível com instabilidade motora.",
   "required_signals": [
     "sig_test_pointer_velocity"
   ],
@@ -10,7 +10,7 @@
       {
         "signal_id": "sig_test_pointer_velocity",
         "operator": ">",
-        "threshold": 1.5,
+        "threshold": 0.5,
         "window_ms": 1000
       }
     ]
@@ -26,8 +26,8 @@
   },
   "cortex_weights": {
     "focus": 0.2,
-    "stress": 0.3,
-    "autonomy": 0.1,
+    "stress": 0.2,
+    "autonomy": 0.2,
     "fatigue": 0.4
   }
 }
