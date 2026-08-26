@@ -39,6 +39,7 @@ from evolution.ledger import (
 from evolution.shadow import record_shadow_candidate
 from evolution.manifest import create_cycle_manifest
 from evolution.post_evaluator import evaluate_proposal_impact, attach_post_evaluation
+from evolution.epistemic.review_chamber import run_epistemic_review, REJECTED_CLAIMS_FILE
 
 
 def log(phase: str, message: str) -> None:
@@ -63,6 +64,7 @@ class EvolutionOrchestrator:
         ledger_path: Path | None = None,
         manifests_dir: Path | None = None,
         evaluations_path: Path | None = None,
+        quarantine_file: Path | None = None,
         dry_run: bool = False,
         skip_git: bool = False,
         force_window: bool = False,
@@ -73,6 +75,7 @@ class EvolutionOrchestrator:
         self.ledger_path = ledger_path or LEDGER_FILE
         self.manifests_dir = manifests_dir or MANIFESTS_DIR
         self.evaluations_path = evaluations_path or EVALUATIONS_FILE
+        self.quarantine_file = quarantine_file or REJECTED_CLAIMS_FILE
         self.dry_run = dry_run
         self.skip_git = skip_git
         self.force_window = force_window
@@ -195,6 +198,26 @@ class EvolutionOrchestrator:
             log("PROPOSAL", f"Proposal {proposal_id} ready (confidence: {confidence})")
             update_phase("PROPOSAL_READY", {"last_proposal_id": proposal_id, "last_opportunity_id": opportunity_id})
 
+            # 9b. Multi-Agent Epistemic Review (Adversarial Critic + Evidence Verifier -> Blind Judge)
+            log("EPISTEMIC", "Convening Epistemic Review Chamber (Critic + Verifier -> Blind Judge)...")
+            update_phase("EPISTEMIC_REVIEW")
+            epistemic_result = run_epistemic_review(
+                proposal=prop,
+                knowledge_state=initial_state,
+                cycle_id=cycle_id,
+                quarantine_file=self.quarantine_file
+            )
+            decision = epistemic_result.get("decision")
+            if decision in ("QUARANTINE", "REJECT"):
+                reason = epistemic_result.get("judge_ruling", {}).get("quarantine_reason", f"epistemic_{decision.lower()}")
+                log("EPISTEMIC", f"Proposal placed in {decision} by Blind Judge: {reason}")
+                record_success(cycle_id=cycle_id, stop_reason=f"epistemic_{decision.lower()}")
+                return {"status": decision, "cycle_id": cycle_id, "reason": reason}
+
+            # Update proposal file with approved provenance before validation & publishing
+            proposal_data["proposal"] = epistemic_result.get("reviewed_proposal", prop)
+            PROPOSAL_OUTPUT_FILE.write_text(json.dumps(proposal_data, indent=2), encoding="utf-8")
+
             # 10. Validate Proposal
             log("VALIDATION", "Validating proposal against schema and epistemic policy...")
             update_phase("VALIDATING_PROPOSAL")
@@ -251,30 +274,7 @@ class EvolutionOrchestrator:
             )
             attach_post_evaluation(cycle_id=cycle_id, evaluation_result=post_eval, evaluations_path=self.evaluations_path)
 
-            # 16. Create Cycle Manifest (Recorded ON the feature branch before committing)
-            predicted_metrics = {
-                "novelty_score": float(prop.get("novelty_score", 0.85)),
-                "coverage_gain": float(prop.get("coverage_gain", 0.20)),
-                "confidence": float(confidence),
-            }
-
-            create_cycle_manifest(
-                cycle_id=cycle_id,
-                main_before_sha=main_before_sha,
-                state_before_hash=initial_state_hash,
-                state_after_hash=resulting_state_hash,
-                proposal_hash=hash_proposal(prop),
-                dataset_counts_before=dataset_counts_before,
-                dataset_counts_after=dataset_counts_after,
-                predicted_metrics=predicted_metrics,
-                observed_metrics=post_eval.get("observed", {}),
-                gate_verdict={"valid": True, "safe": True, "classification": "PREDICTED_IMPROVEMENT"},
-                action_taken="SHADOW_RECORDED",
-                timestamp_start=timestamp_start,
-                manifests_dir=self.manifests_dir
-            )
-
-            # 17. Git Commit, Push & PR Lifecycle
+            # 16. Git Commit, Push & PR Lifecycle
             if not self.skip_git:
                 self.runner(["git", "add", "-A"])
                 code, diff_out, _ = self.runner(["git", "diff", "--cached", "--quiet"])
@@ -318,13 +318,38 @@ class EvolutionOrchestrator:
                     log("AUTO_MERGE", "Auto-merge enabled. Requesting PR squash merge...")
                     self.runner(["gh", "pr", "merge", branch_name, "--squash", "--delete-branch"])
                 else:
-                    log("AUTO_MERGE", "Auto-merge disabled (Shadow Mode). Returning main to clean state...")
-                    # Return to main
+                    log("AUTO_MERGE", "Auto-merge disabled (Shadow Mode). PR left for observation.")
+                    # Return to main and verify No-Silent-Mutation Guard on main
                     self.runner(["git", "checkout", "main"])
+                    state_on_main = hash_knowledge_state()
+                    if state_on_main != initial_state_hash:
+                        raise RuntimeError("SHADOW_MUTATION_DETECTED: Dataset on main was mutated during shadow observation")
 
+            # 17. Create Cycle Manifest
             question_id = prop.get("question", {}).get("id") or prop.get("question", {}).get("question_id")
 
-            # 18. Record State Success
+            predicted_metrics = {
+                "novelty_score": float(prop.get("novelty_score", 0.85)),
+                "coverage_gain": float(prop.get("coverage_gain", 0.20)),
+                "confidence": float(confidence),
+            }
+
+            create_cycle_manifest(
+                cycle_id=cycle_id,
+                main_before_sha=main_before_sha,
+                state_before_hash=initial_state_hash,
+                state_after_hash=resulting_state_hash,
+                proposal_hash=hash_proposal(prop),
+                dataset_counts_before=dataset_counts_before,
+                dataset_counts_after=dataset_counts_after,
+                predicted_metrics=predicted_metrics,
+                observed_metrics=post_eval.get("observed", {}),
+                gate_verdict={"valid": True, "safe": True, "classification": "PREDICTED_IMPROVEMENT"},
+                action_taken="SHADOW_RECORDED",
+                timestamp_start=timestamp_start,
+                manifests_dir=self.manifests_dir
+            )
+
             record_success(
                 cycle_id=cycle_id,
                 opportunity_id=opportunity_id,
@@ -341,21 +366,17 @@ class EvolutionOrchestrator:
                 }
             )
 
-            # 19. TERMINAL NO-SILENT-MUTATION GUARD (Executes AFTER ALL writes have completed)
-            if not self.skip_git and not is_auto_merge_enabled():
-                log("TERMINAL_GUARD", "Executing Terminal No-Silent-Mutation Guard on main...")
+            # 19. Terminal No-Silent-Mutation Guard (Final Absolute Step)
+            if not self.skip_git:
+                code_stat, stat_out, _ = self.runner(["git", "status", "--porcelain", "data/"])
+                code_head, head_out, _ = self.runner(["git", "rev-parse", "HEAD"])
+                final_main_sha = head_out.strip() if code_head == 0 else ""
                 state_on_main = hash_knowledge_state()
-                if state_on_main != initial_state_hash:
-                    raise RuntimeError(f"TERMINAL_MUTATION_DETECTED: Dataset hash on main ({state_on_main}) != initial hash ({initial_state_hash})")
 
-                code_status, diff_data, _ = self.runner(["git", "status", "--porcelain", "data/"])
-                if code_status == 0 and diff_data.strip():
-                    raise RuntimeError(f"TERMINAL_MUTATION_DETECTED: data/ directory is dirty on main:\n{diff_data}")
-
-                code_head, head_after, _ = self.runner(["git", "rev-parse", "HEAD"])
-                if code_head == 0 and head_after.strip() != main_before_sha:
-                    raise RuntimeError(f"TERMINAL_MUTATION_DETECTED: main HEAD SHA moved ({head_after.strip()}) != before ({main_before_sha})")
-                log("TERMINAL_GUARD", "Terminal No-Silent-Mutation Guard: PASS (main is 100% untouched)")
+                if state_on_main != initial_state_hash or stat_out.strip() != "" or (main_before_sha and final_main_sha != main_before_sha):
+                    raise RuntimeError(
+                        f"TERMINAL_MUTATION_DETECTED: main state violation (hash_match={state_on_main == initial_state_hash}, clean_data={stat_out.strip() == ''}, sha_match={final_main_sha == main_before_sha})"
+                    )
 
             log("SUCCESS", f"Evolution cycle {cycle_id} completed successfully!")
             return {

@@ -13,3 +13,4 @@ generator/output/
 evolution/ledger.jsonl
 evolution/post_evaluations.jsonl
 evolution/manifests/
+evolution/rejected_claims.jsonl

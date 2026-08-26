@@ -197,7 +197,7 @@ def test_quality_gate_passes_on_clean_repository():
     for r in results:
         assert r["passed"] is True, f"Gate {r['gate']} failed with: stderr={r.get('stderr')} stdout={r.get('stdout')}"
     assert all_passed is True
-    assert len(results) == 6
+    assert len(results) == 7
 
 
 # ----------------------------------------------------------------------
@@ -263,8 +263,6 @@ def test_orchestrator_rejects_low_confidence_proposal(tmp_path, monkeypatch):
 
     orch = EvolutionOrchestrator(
         policy_path=policy_file,
-        ledger_path=tmp_path / "ledger.jsonl",
-        manifests_dir=tmp_path / "manifests",
         skip_git=True,
         skip_preflight=True,
         force_window=True,

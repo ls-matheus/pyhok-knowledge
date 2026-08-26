@@ -160,6 +160,70 @@
           "type": "object"
         }
       }
+    },
+    "epistemic_status": {
+      "type": "string",
+      "enum": [
+        "EXTERNAL_FACT",
+        "OBSERVATION",
+        "DERIVED",
+        "HYPOTHESIS",
+        "SPECULATION"
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "epistemic_status",
+        "derived_from",
+        "evidence_roots",
+        "derivation_depth",
+        "independent_evidence_count"
+      ],
+      "properties": {
+        "epistemic_status": {
+          "type": "string",
+          "enum": [
+            "EXTERNAL_FACT",
+            "OBSERVATION",
+            "DERIVED",
+            "HYPOTHESIS",
+            "SPECULATION"
+          ]
+        },
+        "derived_from": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^q_[a-z0-9_]+$"
+          }
+        },
+        "evidence_roots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(sig|ext)_[a-z0-9_]+$"
+          }
+        },
+        "derivation_depth": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "independent_evidence_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "generator_model": {
+          "type": "string"
+        },
+        "cycle_id": {
+          "type": "string"
+        },
+        "judge_ruling": {
+          "type": "object"
+        }
+      }
     }
   }
 }
