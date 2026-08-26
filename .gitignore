@@ -10,3 +10,6 @@ generator/input/agent_context.json
 
 # Generated agent runtime artifacts
 generator/output/
+evolution/ledger.jsonl
+evolution/post_evaluations.jsonl
+evolution/manifests/
