@@ -45,7 +45,8 @@ DEFAULT_STATUS = {
         "successful_runs": 0,
         "failed_runs": 0,
         "skipped_runs": 0,
-        "blocked_runs": 0
+        "blocked_runs": 0,
+        "circuit_breaker_trips": 0
     }
 }
 
@@ -215,6 +216,7 @@ def record_failure(
         current["circuit_breaker"]["is_open"] = True
         current["circuit_breaker"]["tripped_at"] = now_str
         current["circuit_breaker"]["trip_reason"] = f"{current['consecutive_failures']} consecutive failures: {error}"
+        current["stats"]["circuit_breaker_trips"] += 1
     else:
         current["status"] = "FAILED"
 

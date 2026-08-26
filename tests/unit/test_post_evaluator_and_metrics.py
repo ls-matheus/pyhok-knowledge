@@ -70,6 +70,29 @@ def test_evaluate_proposal_impact_redundancy():
     eval_result = evaluate_proposal_impact(state_before, proposal, state_after, max_redundancy_threshold=0.0)
     assert eval_result["actually_improved"] is False
     assert eval_result["observed"]["redundancy"] > 0.0
+    assert eval_result["observed"]["redundancy"] == 1.0  # Exact duplicate signal set
+
+
+def test_evaluate_proposal_impact_jaccard_similarity():
+    state_before = {
+        "questions": [{"id": "q_001", "required_signals": ["sig_01", "sig_02"]}],
+        "signals": [{"id": "sig_01"}, {"id": "sig_02"}, {"id": "sig_03"}],
+        "relations": []
+    }
+    # Jaccard: {1,2} vs {1,2,3} -> 2/3 = 0.6667
+    proposal = {
+        "proposal_id": "prop_partial_overlap",
+        "question": {"id": "q_partial", "required_signals": ["sig_01", "sig_02", "sig_03"]}
+    }
+    state_after = {
+        "questions": [{"id": "q_001", "required_signals": ["sig_01", "sig_02"]}, {"id": "q_partial", "required_signals": ["sig_01", "sig_02", "sig_03"]}],
+        "signals": [{"id": "sig_01"}, {"id": "sig_02"}, {"id": "sig_03"}],
+        "relations": []
+    }
+
+    eval_result = evaluate_proposal_impact(state_before, proposal, state_after)
+    assert eval_result["observed"]["redundancy"] == pytest.approx(0.6667, abs=1e-3)
+    assert eval_result["observed"]["signal_coverage_delta"] == pytest.approx(1 / 3, abs=1e-3)
 
 
 # ----------------------------------------------------------------------

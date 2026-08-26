@@ -41,6 +41,9 @@ def generate_shadow_summary_dict(
             pass
 
     circuit_breaker_events = 1 if status_data.get("circuit_breaker", {}).get("is_open") else 0
+    circuit_breaker_events = status_data.get("stats", {}).get("circuit_breaker_trips", 0)
+    if circuit_breaker_events == 0 and status_data.get("circuit_breaker", {}).get("is_open"):
+        circuit_breaker_events = 1
 
     total_cycles = len(events)
     predicted_improvements = sum(
