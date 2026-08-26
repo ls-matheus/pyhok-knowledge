@@ -126,7 +126,7 @@ def main():
 
     existing = QUESTIONS_DIR / f"{question_id}.json"
 
-    if existing.exists():
+    if existing.exists() and existing.resolve() != question_path.resolve():
         fail([
             f"Question already exists: {question_id}"
         ])

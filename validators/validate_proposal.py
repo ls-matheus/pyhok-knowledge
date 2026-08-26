@@ -2,101 +2,46 @@ import json
 import sys
 from pathlib import Path
 
+
 ROOT = Path(__file__).resolve().parents[1]
 
 PROPOSAL_FILE = ROOT / "generator/output/proposal.json"
 MISSION_FILE = ROOT / "mission/mission.json"
 POLICY_FILE = ROOT / "evolution/evolution-policy.json"
 METHODS_FILE = ROOT / "generator/methods/methods.json"
+
 SIGNALS_DIR = ROOT / "data/signals"
 QUESTIONS_DIR = ROOT / "data/questions"
-RELATIONS_DIR = ROOT / "data/relations"
 
 
 def load_json(path: Path):
     if not path.exists():
         raise RuntimeError(f"Missing required file: {path}")
 
-    return json.loads(
-        path.read_text(encoding="utf-8")
-    )
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
-proposal_doc = load_json(PROPOSAL_FILE)
+def collect_ids(directory: Path):
+    ids = set()
 
-if proposal_doc.get("status") == "NO_PROPOSAL":
-    print("VALIDATION: NO_PROPOSAL")
-    sys.exit(0)
+    if not directory.exists():
+        return ids
 
-proposal = proposal_doc.get("proposal")
+    for path in directory.glob("*.json"):
+        document = load_json(path)
+        value = document.get("id")
 
-if not isinstance(proposal, dict) or not proposal:
-    print("VALIDATION: REJECTED")
-    print("- proposal is missing or empty")
-    sys.exit(1)
+        if value:
+            ids.add(value)
 
-mission = load_json(MISSION_FILE)
-policy = load_json(POLICY_FILE)
-methods = load_json(METHODS_FILE)
+    return ids
 
-known_signals = set()
-known_questions = set()
 
-for path in SIGNALS_DIR.glob("*.json"):
-    signal = load_json(path)
-    signal_id = signal.get("id")
+def contains_forbidden_language(value):
+    if not isinstance(value, str):
+        return False
 
-    if signal_id:
-        known_signals.add(signal_id)
-
-for path in QUESTIONS_DIR.glob("*.json"):
-    question = load_json(path)
-    question_id = question.get("id")
-
-    if question_id:
-        known_questions.add(question_id)
-
-errors = []
-
-# ------------------------------------------------------------
-# Proposal metadata
-# ------------------------------------------------------------
-
-mission_version = proposal.get("mission_version")
-
-if mission_version != mission.get("mission_version"):
-    errors.append(
-        "Mission version mismatch."
-    )
-
-# ------------------------------------------------------------
-# Question
-# ------------------------------------------------------------
-
-question = proposal.get("question")
-
-if not isinstance(question, dict):
-    errors.append(
-        "Question payload is missing."
-    )
-else:
-
-    question_id = question.get("id")
-
-    if not question_id:
-        errors.append(
-            "Question id is missing."
-        )
-
-    elif question_id in known_questions:
-        errors.append(
-            f"Question already exists: {question_id}"
-        )
-
-    hypothesis = question.get(
-        "hypothesis",
-        ""
-    ).lower()
+    text = value.lower()
 
     forbidden_terms = [
         "diagnose",
@@ -105,210 +50,411 @@ else:
         "clinical diagnosis",
         "confirmed disorder",
         "has autism",
-        "has adhd"
+        "has adhd",
     ]
 
-    for term in forbidden_terms:
-        if term in hypothesis:
+    return [
+        term
+        for term in forbidden_terms
+        if term in text
+    ]
+
+
+def validate_question_create(
+    proposal,
+    mission,
+    policy,
+    methods,
+    known_signals,
+    known_questions,
+):
+    errors = []
+
+    question = proposal.get("question")
+
+    if not isinstance(question, dict):
+        return ["Question payload is missing."]
+
+    question_id = question.get("id")
+
+    if not question_id:
+        errors.append("Question id is missing.")
+    elif question_id in known_questions:
+        errors.append(
+            f"Question already exists: {question_id}"
+        )
+
+    domain = proposal.get("domain")
+
+    if domain not in mission.get("domains", []):
+        errors.append(
+            f"Unknown mission domain: {domain}"
+        )
+
+    # ------------------------------------------------------------
+    # QuestionEntity v2 structure
+    # ------------------------------------------------------------
+
+    required_question_fields = [
+        "id",
+        "hypothesis",
+        "required_signals",
+        "evaluation_trigger",
+        "evaluation_model",
+        "evidence_model",
+        "cortex_weights",
+    ]
+
+    for field in required_question_fields:
+        if field not in question:
             errors.append(
-                f"Forbidden diagnostic language: {term}"
+                f"question.{field} is missing."
             )
 
-    # --------------------------------------------------------
-    # Required signals
-    # --------------------------------------------------------
+    # ------------------------------------------------------------
+    # Signals
+    # ------------------------------------------------------------
 
-    for signal_id in question.get(
-        "required_signals",
-        []
-    ):
+    signal_ids = question.get("required_signals", [])
+
+    if not isinstance(signal_ids, list):
+        errors.append(
+            "question.required_signals must be a list."
+        )
+        signal_ids = []
+
+    for signal_id in signal_ids:
         if signal_id not in known_signals:
             errors.append(
                 f"Unknown signal: {signal_id}"
             )
 
-    # --------------------------------------------------------
-    # Trigger signals
-    # --------------------------------------------------------
+    # ------------------------------------------------------------
+    # Evaluation trigger
+    # ------------------------------------------------------------
 
     trigger = question.get(
         "evaluation_trigger",
-        {}
+        {},
     )
 
-    for rule in trigger.get(
-        "rules",
-        []
-    ):
-        signal_id = rule.get(
-            "signal_id"
+    if not isinstance(trigger, dict):
+        errors.append(
+            "question.evaluation_trigger must be an object."
         )
+        trigger = {}
 
-        if signal_id not in known_signals:
+    rules = trigger.get("rules", [])
+
+    if not isinstance(rules, list):
+        errors.append(
+            "question.evaluation_trigger.rules must be a list."
+        )
+        rules = []
+
+    trigger_signal_ids = []
+
+    for rule in rules:
+        if not isinstance(rule, dict):
             errors.append(
-                f"Unknown trigger signal: {signal_id}"
+                "Evaluation trigger rule must be an object."
+            )
+            continue
+
+        signal_id = rule.get("signal_id")
+
+        if signal_id:
+            trigger_signal_ids.append(signal_id)
+
+            if signal_id not in known_signals:
+                errors.append(
+                    f"Unknown trigger signal: {signal_id}"
+                )
+
+    for signal_id in trigger_signal_ids:
+        if signal_id not in signal_ids:
+            errors.append(
+                "Trigger signal is not declared in "
+                "question.required_signals: "
+                f"{signal_id}"
             )
 
-    # --------------------------------------------------------
+    # ------------------------------------------------------------
     # Evaluation method
-    # --------------------------------------------------------
+    # ------------------------------------------------------------
 
     evaluation_model = question.get(
-        "evaluation_model"
+        "evaluation_model",
+        {},
     )
 
-    if not isinstance(
-        evaluation_model,
-        dict
-    ):
+    if not isinstance(evaluation_model, dict):
         errors.append(
-            "evaluation_model is missing."
+            "question.evaluation_model must be an object."
         )
-    else:
-        method_id = evaluation_model.get(
-            "method_id"
+        evaluation_model = {}
+
+    method_id = evaluation_model.get("method_id")
+    version = evaluation_model.get("version")
+
+    supported_methods = {
+        (
+            method.get("method_id"),
+            method.get("version"),
+        )
+        for method in methods.get("methods", [])
+        if method.get("status") == "SUPPORTED"
+    }
+
+    if not method_id:
+        errors.append(
+            "question.evaluation_model.method_id is missing."
         )
 
-        method_version = evaluation_model.get(
-            "version"
+    if not version:
+        errors.append(
+            "question.evaluation_model.version is missing."
         )
 
-        supported = any(
-            method.get("status") == "SUPPORTED"
-            and method.get("method_id") == method_id
-            and method.get("version") == method_version
-            for method in methods.get(
-                "methods",
-                []
-            )
-        )
-
-        if not supported:
+    if method_id and version:
+        if (method_id, version) not in supported_methods:
             errors.append(
                 "Unsupported evaluation method: "
-                f"{method_id} v{method_version}"
+                f"{method_id} v{version}"
             )
 
-    # --------------------------------------------------------
-    # Cortex weights
-    # --------------------------------------------------------
+    # ------------------------------------------------------------
+    # Evidence consistency
+    # ------------------------------------------------------------
 
-    weights = question.get(
-        "cortex_weights"
-    )
+    evidence = proposal.get("evidence_basis")
 
-    if not isinstance(
-        weights,
-        dict
-    ):
+    if not isinstance(evidence, dict):
         errors.append(
-            "cortex_weights is missing."
+            "evidence_basis is missing."
         )
     else:
-        for dimension in (
-            "focus",
-            "stress",
-            "autonomy",
-            "fatigue"
-        ):
-            value = weights.get(
-                dimension
+        evidence_signals = evidence.get("signals", [])
+        evidence_methods = evidence.get("methods", [])
+
+        if sorted(evidence_signals) != sorted(signal_ids):
+            errors.append(
+                "Evidence signals do not match "
+                "question.required_signals."
             )
 
-            if not isinstance(
-                value,
-                (int, float)
-            ):
+        if method_id:
+            expected_methods = [method_id]
+
+            if sorted(evidence_methods) != sorted(expected_methods):
                 errors.append(
-                    f"Invalid cortex weight: {dimension}"
+                    "Evidence methods do not match "
+                    "question.evaluation_model.method_id."
                 )
 
-            elif not -1.0 <= value <= 1.0:
-                errors.append(
-                    f"Cortex weight out of range: {dimension}"
-                )
+    # ------------------------------------------------------------
+    # Structured justification
+    # ------------------------------------------------------------
 
-# ------------------------------------------------------------
-# Reasoning metadata
-# ------------------------------------------------------------
-
-metadata = proposal.get(
-    "reasoning_metadata"
-)
-
-if not isinstance(
-    metadata,
-    dict
-):
-    errors.append(
-        "reasoning_metadata is missing."
-    )
-else:
-
-    novelty = metadata.get(
-        "novelty_score",
-        0.0
-    )
-
-    coverage_gain = metadata.get(
-        "coverage_gain",
-        0.0
-    )
-
-    minimum_novelty = policy[
-        "limits"
-    ][
-        "minimum_novelty_score"
+    required_justifications = [
+        "rationale",
+        "novelty_justification",
+        "computability_justification",
+        "individuality_justification",
+        "uncertainty_justification",
     ]
 
-    minimum_coverage = policy[
-        "limits"
-    ][
-        "minimum_coverage_gain"
+    for field in required_justifications:
+        value = proposal.get(field)
+
+        if not isinstance(value, str) or not value.strip():
+            errors.append(
+                f"{field} is missing."
+            )
+
+    # ------------------------------------------------------------
+    # Confidence
+    # ------------------------------------------------------------
+
+    confidence = proposal.get("confidence")
+
+    minimum_confidence = policy.get(
+        "limits",
+        {},
+    ).get(
+        "minimum_confidence_in_proposal",
+        0.0,
+    )
+
+    if not isinstance(confidence, (int, float)):
+        errors.append(
+            "confidence is missing or invalid."
+        )
+    elif not 0.0 <= confidence <= 1.0:
+        errors.append(
+            "confidence must be between 0 and 1."
+        )
+    elif confidence < minimum_confidence:
+        errors.append(
+            "Confidence below policy threshold."
+        )
+
+    # ------------------------------------------------------------
+    # Forbidden language
+    # ------------------------------------------------------------
+
+    text_fields = [
+        "rationale",
+        "novelty_justification",
+        "computability_justification",
+        "individuality_justification",
+        "uncertainty_justification",
     ]
 
-    if novelty < minimum_novelty:
-        errors.append(
-            "Novelty below policy threshold."
+    hypothesis = question.get(
+        "hypothesis",
+        "",
+    )
+
+    text_values = [hypothesis]
+
+    for field in text_fields:
+        text_values.append(
+            proposal.get(field, "")
         )
 
-    if coverage_gain < minimum_coverage:
+    for value in text_values:
+        for term in contains_forbidden_language(value):
+            errors.append(
+                f"Forbidden diagnostic language: {term}"
+            )
+
+    # ------------------------------------------------------------
+    # Mission scope
+    # ------------------------------------------------------------
+
+    if mission.get("scope", {}).get(
+        "runtime_execution"
+    ) is True:
         errors.append(
-            "Coverage gain below policy threshold."
+            "Mission runtime scope is invalid."
         )
 
-    for field in (
-        "related_questions",
-        "complements",
-        "contradicts"
-    ):
-        for question_id in metadata.get(
-            field,
-            []
-        ):
-            if question_id not in known_questions:
-                errors.append(
-                    f"Unknown related question: {question_id}"
-                )
+    if mission.get("scope", {}).get(
+        "diagnosis"
+    ) is True:
+        errors.append(
+            "Mission diagnosis scope is invalid."
+        )
 
-# ------------------------------------------------------------
-# Final decision
-# ------------------------------------------------------------
+    return errors
 
-if errors:
-    print("VALIDATION: REJECTED")
+def main():
+    proposal_doc = load_json(PROPOSAL_FILE)
 
-    for error in errors:
-        print(f"- {error}")
+    if proposal_doc.get("status") == "NO_PROPOSAL":
+        print("VALIDATION: NO_PROPOSAL")
+        return 0
 
-    sys.exit(1)
+    if proposal_doc.get("status") != "PROPOSAL_READY":
+        print("VALIDATION: REJECTED")
+        print("- Invalid proposal status.")
+        return 1
 
-print("VALIDATION: APPROVED")
-print(
-    "Question:",
-    proposal["question"]["id"]
-)
-print(
-    "Mission:",
-    mission["mission_version"]
-)
+    proposal = proposal_doc.get("proposal")
+
+    if not isinstance(proposal, dict) or not proposal:
+        print("VALIDATION: REJECTED")
+        print("- proposal is missing or empty")
+        return 1
+
+    mission = load_json(MISSION_FILE)
+    policy = load_json(POLICY_FILE)
+    methods = load_json(METHODS_FILE)
+
+    known_signals = collect_ids(SIGNALS_DIR)
+    known_questions = collect_ids(QUESTIONS_DIR)
+
+    errors = []
+
+    # ------------------------------------------------------------
+    # Operation
+    # ------------------------------------------------------------
+
+    operation = proposal.get("operation")
+
+    allowed_operations = policy.get(
+        "allowed_proposal_types",
+        []
+    )
+
+    if operation not in allowed_operations:
+        errors.append(
+            f"Operation not allowed by policy: {operation}"
+        )
+
+    # ------------------------------------------------------------
+    # Proposal identity
+    # ------------------------------------------------------------
+
+    if not proposal.get("proposal_id"):
+        errors.append(
+            "proposal_id is missing."
+        )
+
+    if not proposal.get("opportunity_id"):
+        errors.append(
+            "opportunity_id is missing."
+        )
+
+    # ------------------------------------------------------------
+    # QUESTION_CREATE
+    # ------------------------------------------------------------
+
+    if operation == "QUESTION_CREATE":
+        errors.extend(
+            validate_question_create(
+                proposal=proposal,
+                mission=mission,
+                policy=policy,
+                methods=methods,
+                known_signals=known_signals,
+                known_questions=known_questions,
+            )
+        )
+
+    # ------------------------------------------------------------
+    # Final decision
+    # ------------------------------------------------------------
+
+    if errors:
+        print("VALIDATION: REJECTED")
+
+        for error in errors:
+            print(f"- {error}")
+
+        return 1
+
+    print("VALIDATION: APPROVED")
+    print(
+        "Proposal:",
+        proposal["proposal_id"],
+    )
+    print(
+        "Operation:",
+        proposal["operation"],
+    )
+    print(
+        "Domain:",
+        proposal.get("domain"),
+    )
+    print(
+        "Question:",
+        proposal["question"]["id"],
+    )
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
