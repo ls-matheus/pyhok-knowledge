@@ -35,6 +35,7 @@ def clean_env(monkeypatch, tmp_path):
     status_file = tmp_path / "global_status.json"
     import scheduler.state as state_mod
     monkeypatch.setattr(state_mod, "STATUS_FILE", status_file)
+    state_mod.save_status(dict(state_mod.DEFAULT_STATUS), status_file=status_file)
 
 
 # ----------------------------------------------------------------------
@@ -220,9 +221,7 @@ def test_orchestrator_skips_when_window_closed(tmp_path):
 
 
 def test_orchestrator_stops_when_max_rejections_reached(tmp_path, monkeypatch):
-    status_file = tmp_path / "status.json"
     import scheduler.state as state_mod
-    monkeypatch.setattr(state_mod, "STATUS_FILE", status_file)
     state_mod.save_status({"status": "IDLE", "consecutive_failures": 2, "stats": {"total_runs": 2, "successful_runs": 0, "failed_runs": 2, "skipped_runs": 0}})
 
     policy_file = tmp_path / "policy.json"
