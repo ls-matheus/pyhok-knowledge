@@ -68,9 +68,10 @@ def capture_baseline(root: Path = ROOT) -> dict[str, Any]:
 
     # 3. Domain Analysis & Known Gaps
     all_domains = []
-    if (root / "mission/mission.json").exists():
+    mission_file = root / "mission/mission.json"
+    if mission_file.exists():
         try:
-            m_data = json.loads((root / "mission/mission.json").read_text(encoding="utf-8"))
+            m_data = json.loads(mission_file.read_text(encoding="utf-8"))
             for d in m_data.get("domains", []):
                 if isinstance(d, str):
                     all_domains.append(d)
