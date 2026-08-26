@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
-
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -13,6 +13,12 @@ POLICY_FILE = ROOT / "evolution/evolution-policy.json"
 
 
 def main() -> int:
+    # Execução manual pelo GitHub Actions pode testar fora da janela.
+    if os.getenv("GITHUB_EVENT_NAME") == "workflow_dispatch":
+        print("EVOLUTION_WINDOW=OPEN")
+        print("REASON=manual_workflow_dispatch")
+        return 0
+
     policy = json.loads(
         POLICY_FILE.read_text(encoding="utf-8")
     )
