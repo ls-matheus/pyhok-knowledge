@@ -1,0 +1,33 @@
+{
+  "id": "q_temporal_dynamics_pointer_velocity_persistence",
+  "hypothesis": "A persistência de alterações na velocidade do ponteiro em uma janela temporal estendida indica a sustentação de um padrão motor, permitindo diferenciar oscilações momentâneas de instabilidades contínuas.",
+  "required_signals": [
+    "sig_test_pointer_velocity"
+  ],
+  "evaluation_trigger": {
+    "logical_operator": "AND",
+    "rules": [
+      {
+        "signal_id": "sig_test_pointer_velocity",
+        "operator": ">",
+        "threshold": 0.5,
+        "window_ms": 3000
+      }
+    ]
+  },
+  "evaluation_model": {
+    "method_id": "method_persistence",
+    "version": "1.0.0",
+    "parameters": {}
+  },
+  "evidence_model": {
+    "base_strength": 0.8,
+    "decay_rate_per_sec": 0.05
+  },
+  "cortex_weights": {
+    "focus": 0.0,
+    "stress": 0.2,
+    "autonomy": 0.0,
+    "fatigue": 0.3
+  }
+}
