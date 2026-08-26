@@ -29,9 +29,12 @@ from scheduler.orchestrator import EvolutionOrchestrator
 
 
 @pytest.fixture(autouse=True)
-def clean_env(monkeypatch):
+def clean_env(monkeypatch, tmp_path):
     monkeypatch.delenv("GITHUB_EVENT_NAME", raising=False)
     monkeypatch.delenv("MANUAL_OVERRIDE", raising=False)
+    status_file = tmp_path / "global_status.json"
+    import scheduler.state as state_mod
+    monkeypatch.setattr(state_mod, "STATUS_FILE", status_file)
 
 
 # ----------------------------------------------------------------------
@@ -144,12 +147,12 @@ def test_state_lifecycle(tmp_path, monkeypatch):
 
     # 1. Initial load
     init_status = state_mod.load_status()
-    assert init_status["status"] == "READY"
+    assert init_status["status"] == "IDLE"
     assert init_status["stats"]["total_runs"] == 0
 
     # 2. Start cycle
     started = state_mod.start_cycle("cycle_test_001")
-    assert started["status"] == "WINDOW_OPEN"
+    assert started["status"] == "PREFLIGHT"
     assert started["current_cycle_id"] == "cycle_test_001"
     assert started["stats"]["total_runs"] == 1
 
@@ -165,17 +168,17 @@ def test_state_lifecycle(tmp_path, monkeypatch):
         branch="agent/evolution-test",
         pr_url="https://github.com/test/pr/1"
     )
-    assert success_state["status"] == "READY"
+    assert success_state["status"] == "IDLE"
     assert success_state["last_proposal_id"] == "prop_test_01"
     assert "prop_test_01" in success_state["processed_proposals"]
     assert success_state["stats"]["successful_runs"] == 1
-    assert success_state["consecutive_rejections"] == 0
+    assert success_state["consecutive_failures"] == 0
 
     # 5. Record Failure
     fail_state = state_mod.record_failure("Schema validation error", stop_reason="validation_error")
     assert fail_state["status"] == "FAILED"
     assert fail_state["last_error"] == "Schema validation error"
-    assert fail_state["consecutive_rejections"] == 1
+    assert fail_state["consecutive_failures"] == 1
     assert fail_state["stats"]["failed_runs"] == 1
 
     # 6. Record Skip
@@ -210,7 +213,7 @@ def test_orchestrator_skips_when_window_closed(tmp_path):
             "end": "20:00"
         }
     }))
-    orch = EvolutionOrchestrator(policy_path=policy_file, skip_git=True)
+    orch = EvolutionOrchestrator(policy_path=policy_file, skip_git=True, skip_preflight=True)
     res = orch.execute_cycle()
     assert res["status"] == "SKIPPED"
     assert "scheduler_disabled" in res["reason"]
@@ -220,7 +223,7 @@ def test_orchestrator_stops_when_max_rejections_reached(tmp_path, monkeypatch):
     status_file = tmp_path / "status.json"
     import scheduler.state as state_mod
     monkeypatch.setattr(state_mod, "STATUS_FILE", status_file)
-    state_mod.save_status({"status": "READY", "consecutive_rejections": 2, "stats": {"total_runs": 2, "successful_runs": 0, "failed_runs": 2, "skipped_runs": 0}})
+    state_mod.save_status({"status": "IDLE", "consecutive_failures": 2, "stats": {"total_runs": 2, "successful_runs": 0, "failed_runs": 2, "skipped_runs": 0}})
 
     policy_file = tmp_path / "policy.json"
     policy_file.write_text(json.dumps({
@@ -228,10 +231,10 @@ def test_orchestrator_stops_when_max_rejections_reached(tmp_path, monkeypatch):
         "limits": {"max_consecutive_rejections": 2}
     }))
 
-    orch = EvolutionOrchestrator(policy_path=policy_file, skip_git=True)
+    orch = EvolutionOrchestrator(policy_path=policy_file, skip_git=True, skip_preflight=True)
     res = orch.execute_cycle()
     assert res["status"] == "SKIPPED"
-    assert res["reason"] == "consecutive_rejections_limit_reached"
+    assert res["reason"] == "consecutive_failures_limit_reached"
 
 
 def test_orchestrator_rejects_low_confidence_proposal(tmp_path, monkeypatch):
@@ -259,7 +262,13 @@ def test_orchestrator_rejects_low_confidence_proposal(tmp_path, monkeypatch):
     def mock_runner(cmd):
         return 0, "OK", ""
 
-    orch = EvolutionOrchestrator(policy_path=policy_file, skip_git=True, force_window=True, runner_fn=mock_runner)
+    orch = EvolutionOrchestrator(
+        policy_path=policy_file,
+        skip_git=True,
+        skip_preflight=True,
+        force_window=True,
+        runner_fn=mock_runner
+    )
     res = orch.execute_cycle()
     assert res["status"] == "FAILED"
     assert res["reason"] == "confidence_below_threshold"

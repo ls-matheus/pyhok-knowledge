@@ -1,25 +1,36 @@
 {
-  "status": "SKIPPED",
+  "status": "BLOCKED",
   "current_cycle_id": null,
-  "last_run": "2026-08-26T10:51:27.689355-03:00",
-  "last_success": "2026-08-26T10:51:39.958080-03:00",
-  "last_failure": null,
-  "last_error": null,
-  "last_stop_reason": "window_closed: scheduler_disabled",
-  "processed_proposals": [
-    "prop_opp_temporal_persistence_pointer_velocity"
-  ],
-  "last_opportunity_id": "opp_temporal_persistence_pointer_velocity",
-  "last_proposal_id": "prop_opp_temporal_persistence_pointer_velocity",
-  "last_question_id": "q_temporal_persistence_pointer_velocity",
+  "last_run": "2026-08-26T15:38:54.514048-03:00",
+  "last_success": null,
+  "last_failure": "2026-08-26T15:38:54.517697-03:00",
+  "last_error": "confidence 0.65 < 0.8",
+  "last_stop_reason": "circuit_breaker_open: 3 consecutive failures: confidence 0.65 < 0.8",
+  "processed_proposals": [],
+  "last_opportunity_id": null,
+  "last_proposal_id": null,
+  "last_question_id": null,
   "last_branch": null,
   "last_pr_url": null,
-  "consecutive_rejections": 0,
-  "stats": {
-    "total_runs": 2,
-    "successful_runs": 1,
-    "failed_runs": 0,
-    "skipped_runs": 2
+  "consecutive_failures": 3,
+  "circuit_breaker": {
+    "is_open": true,
+    "max_consecutive_failures": 3,
+    "tripped_at": "2026-08-26T15:38:54.517697-03:00",
+    "trip_reason": "3 consecutive failures: confidence 0.65 < 0.8"
   },
-  "last_release": null
+  "audit_trail": {
+    "main_before_sha": null,
+    "proposal_commit_sha": null,
+    "merge_commit_sha": null,
+    "state_before_hash": null,
+    "state_after_hash": null
+  },
+  "stats": {
+    "total_runs": 3,
+    "successful_runs": 0,
+    "failed_runs": 3,
+    "skipped_runs": 1,
+    "blocked_runs": 1
+  }
 }

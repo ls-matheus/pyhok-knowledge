@@ -15,6 +15,7 @@ PROPOSAL_OUTPUT_FILE = ROOT / "generator/output/proposal.json"
 AUDIT_OUTPUT_FILE = ROOT / "generator/output/audit_result.json"
 
 from scheduler.window_guard import is_window_open
+from scheduler.preflight import run_preflight
 from scheduler.state import (
     load_status,
     save_status,
@@ -23,8 +24,17 @@ from scheduler.state import (
     record_success,
     record_failure,
     record_skip,
+    record_blocked,
+    is_circuit_open,
+    is_auto_merge_enabled,
 )
 from scheduler.quality_gate import run_quality_gates
+from evolution.ledger import (
+    hash_knowledge_state,
+    hash_proposal,
+    append_ledger_event,
+)
+from evolution.shadow import record_shadow_candidate
 
 
 def log(phase: str, message: str) -> None:
@@ -44,12 +54,14 @@ class EvolutionOrchestrator:
         dry_run: bool = False,
         skip_git: bool = False,
         force_window: bool = False,
+        skip_preflight: bool = False,
         runner_fn: Callable[[list[str]], tuple[int, str, str]] = run_subcommand,
     ):
         self.policy_path = policy_path
         self.dry_run = dry_run
         self.skip_git = skip_git
         self.force_window = force_window
+        self.skip_preflight = skip_preflight
         self.runner = runner_fn
         self.policy = self._load_policy()
 
@@ -61,7 +73,26 @@ class EvolutionOrchestrator:
     def execute_cycle(self) -> dict[str, Any]:
         log("INIT", "Starting autonomous evolution cycle...")
 
-        # 1. Check Window Guard
+        # 1. Circuit Breaker Check
+        circuit_open, trip_reason = is_circuit_open()
+        if circuit_open and not self.force_window:
+            log("CIRCUIT_BREAKER", f"Circuit breaker is OPEN ({trip_reason}). Aborting cycle.")
+            record_blocked(reason=f"circuit_breaker_open: {trip_reason}")
+            return {"status": "CIRCUIT_OPEN", "reason": trip_reason}
+
+        # 2. Preflight Environment & Workspace Validation
+        if not self.skip_preflight:
+            log("PREFLIGHT", "Executing system and workspace hygiene preflight checks...")
+            preflight_ok, preflight_reason, preflight_details = run_preflight(
+                root=ROOT,
+                enforce_branch=not self.skip_git
+            )
+            if not preflight_ok:
+                log("PREFLIGHT", f"Preflight blocked: {preflight_reason}")
+                record_blocked(reason=preflight_reason)
+                return {"status": "BLOCKED", "reason": preflight_reason, "details": preflight_details}
+
+        # 3. Check Window Guard
         open_window, reason, meta = is_window_open(
             self.policy,
             is_manual_override=self.force_window or (os.getenv("GITHUB_EVENT_NAME") == "workflow_dispatch") or (os.getenv("MANUAL_OVERRIDE") == "1")
@@ -71,42 +102,45 @@ class EvolutionOrchestrator:
             record_skip(reason=f"window_closed: {reason}")
             return {"status": "SKIPPED", "reason": reason}
 
-        # 2. Check Policy Limits (Rate Limits & Consecutive Rejections)
+        # 4. Check Policy Limits (Rate Limits & Consecutive Failures)
         status_data = load_status()
-        max_rejections = self.policy.get("limits", {}).get("max_consecutive_rejections", 2)
-        if status_data.get("consecutive_rejections", 0) >= max_rejections and not self.force_window:
-            log("POLICY", f"Max consecutive rejections reached ({max_rejections}). Stopping cycle.")
-            record_skip(reason="consecutive_rejections_limit_reached")
-            return {"status": "SKIPPED", "reason": "consecutive_rejections_limit_reached"}
+        max_failures = self.policy.get("limits", {}).get("max_consecutive_rejections", 3)
+        if status_data.get("consecutive_failures", 0) >= max_failures and not self.force_window:
+            log("POLICY", f"Max consecutive failures reached ({max_failures}). Stopping cycle.")
+            record_skip(reason="consecutive_failures_limit_reached")
+            return {"status": "SKIPPED", "reason": "consecutive_failures_limit_reached"}
 
-        # 3. Start Cycle State
+        # 5. Start Cycle State
         cycle_id = f"cycle_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         start_cycle(cycle_id)
-        log("STATE", f"Cycle {cycle_id} initiated. Status: WINDOW_OPEN")
+        log("STATE", f"Cycle {cycle_id} initiated. Status: PREFLIGHT -> RUNNING")
 
         try:
-            # 4. Build Context
+            # Capture initial state hash
+            initial_state_hash = hash_knowledge_state()
+
+            # 6. Build Context
             log("CONTEXT", "Building repository knowledge context...")
             update_phase("BUILDING_CONTEXT")
             code, out, err = self.runner([sys.executable, str(ROOT / "generator/build_context.py")])
             if code != 0:
                 raise RuntimeError(f"build_context failed: {err or out}")
 
-            # 5. Audit Knowledge Graph
+            # 7. Audit Knowledge Graph
             log("AUDIT", "Auditing knowledge graph for evolution opportunities...")
             update_phase("AUDITING")
             code, out, err = self.runner([sys.executable, str(ROOT / "generator/run_audit.py")])
             if code != 0:
                 raise RuntimeError(f"run_audit failed: {err or out}")
 
-            # 6. Generate Proposal
+            # 8. Generate Proposal
             log("PROPOSAL", "Generating evolution proposal...")
             update_phase("GENERATING_PROPOSAL")
             code, out, err = self.runner([sys.executable, str(ROOT / "generator/run_proposal.py")])
             if code != 0:
                 raise RuntimeError(f"run_proposal failed: {err or out}")
 
-            # 7. Check Proposal Result
+            # 9. Check Proposal Result
             if not PROPOSAL_OUTPUT_FILE.exists():
                 raise RuntimeError("proposal.json not produced by generator")
 
@@ -136,31 +170,40 @@ class EvolutionOrchestrator:
             log("PROPOSAL", f"Proposal {proposal_id} ready (confidence: {confidence})")
             update_phase("PROPOSAL_READY", {"last_proposal_id": proposal_id, "last_opportunity_id": opportunity_id})
 
-            # 8. Validate Proposal
+            # 10. Validate Proposal
             log("VALIDATION", "Validating proposal against schema and epistemic policy...")
             update_phase("VALIDATING_PROPOSAL")
             code, out, err = self.runner([sys.executable, str(ROOT / "validators/validate_proposal.py")])
             if code != 0:
                 raise RuntimeError(f"validate_proposal rejected proposal: {err or out}")
 
-            # 9. Publish Proposal into Working Tree
+            # 11. Record in Shadow Evolution Ledger
+            log("SHADOW", "Recording candidate in Evolution Ledger (Shadow Mode)...")
+            record_shadow_candidate(
+                cycle_id=cycle_id,
+                proposal_data=proposal_data,
+                initial_state_hash=initial_state_hash
+            )
+
+            # 12. Publish Proposal into Working Tree
             log("PUBLISH", "Publishing proposal into canonical dataset...")
             update_phase("PUBLISHING")
             code, out, err = self.runner([sys.executable, str(ROOT / "validators/publish_proposal.py")])
             if code != 0:
                 raise RuntimeError(f"publish_proposal failed: {err or out}")
 
-            # 10. Run Full Quality Gates
+            # 13. Run Full Quality Gates
             log("QUALITY_GATE", "Running comprehensive quality gates...")
             update_phase("QUALITY_GATES")
-            all_gates_pass, gate_results = run_quality_gates(verbose=True)
+            all_gates_pass, gate_results = run_quality_gates(verbose=True, runner_fn=self.runner)
             if not all_gates_pass:
                 failed_gates = [g["gate"] for g in gate_results if not g["passed"]]
                 raise RuntimeError(f"Quality gates failed: {', '.join(failed_gates)}")
 
-            # 11. Git Branch, Commit, Push & PR Lifecycle
+            # 14. Git Branch, Commit, Push & PR Lifecycle
             branch_name = f"agent/evolution-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
             pr_url = None
+            proposal_commit_sha = None
 
             if not self.skip_git:
                 log("BRANCH", f"Creating evolution branch {branch_name}...")
@@ -176,7 +219,12 @@ class EvolutionOrchestrator:
                     return {"status": "NO_CHANGES", "cycle_id": cycle_id}
 
                 log("COMMIT", "Committing proposed knowledge...")
-                self.runner(["git", "commit", "-m", f"agent: propose knowledge evolution {proposal_id}"])
+                code, c_out, _ = self.runner(["git", "commit", "-m", f"agent: propose knowledge evolution {proposal_id}"])
+
+                # Get commit SHA
+                code_sha, sha_out, _ = self.runner(["git", "rev-parse", "HEAD"])
+                if code_sha == 0:
+                    proposal_commit_sha = sha_out.strip()
 
                 log("PUSH", f"Pushing branch {branch_name}...")
                 self.runner(["git", "push", "origin", branch_name])
@@ -186,8 +234,9 @@ class EvolutionOrchestrator:
                     f"Automated knowledge proposal generated by the PyHok Knowledge Agent.\n\n"
                     f"- Proposal: `{proposal_id}`\n"
                     f"- Opportunity: `{opportunity_id}`\n"
-                    f"- Confidence: `{confidence}`\n\n"
-                    f"Quality Gates: All 5 canonical gates PASSED."
+                    f"- Confidence: `{confidence}`\n"
+                    f"- Initial State Hash: `{initial_state_hash}`\n\n"
+                    f"Quality Gates: All canonical gates PASSED in Shadow Mode."
                 )
                 code, pr_out, pr_err = self.runner([
                     "gh", "pr", "create",
@@ -200,8 +249,17 @@ class EvolutionOrchestrator:
                     pr_url = pr_out.strip()
                     log("PR", f"Pull request created: {pr_url}")
 
-            # 12. Record Successful Cycle Completion
+                # Check auto-merge kill switch
+                if is_auto_merge_enabled():
+                    log("AUTO_MERGE", "Auto-merge enabled. Requesting PR squash merge...")
+                    self.runner(["gh", "pr", "merge", branch_name, "--squash", "--delete-branch"])
+                else:
+                    log("AUTO_MERGE", "Auto-merge disabled (Shadow Mode). PR left for observation.")
+
+            # 15. Record Successful Cycle Completion
             question_id = prop.get("question", {}).get("id") or prop.get("question", {}).get("question_id")
+            resulting_state_hash = hash_knowledge_state()
+
             record_success(
                 cycle_id=cycle_id,
                 opportunity_id=opportunity_id,
@@ -209,7 +267,12 @@ class EvolutionOrchestrator:
                 question_id=question_id,
                 branch=branch_name if not self.skip_git else None,
                 pr_url=pr_url,
-                stop_reason="cycle_completed_successfully"
+                stop_reason="cycle_completed_successfully",
+                audit_trail={
+                    "state_before_hash": initial_state_hash,
+                    "state_after_hash": resulting_state_hash,
+                    "proposal_commit_sha": proposal_commit_sha
+                }
             )
             log("SUCCESS", f"Evolution cycle {cycle_id} completed successfully!")
             return {
@@ -229,14 +292,16 @@ class EvolutionOrchestrator:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="PyHok Knowledge Autonomous Evolution Orchestrator")
-    parser.add_argument("--force", action="store_true", help="Force execution regardless of window guard")
+    parser.add_argument("--force", action="store_true", help="Force execution regardless of window guard or circuit breaker")
     parser.add_argument("--skip-git", action="store_true", help="Skip git branch/commit/push/PR operations")
+    parser.add_argument("--skip-preflight", action="store_true", help="Skip preflight environment checks")
     parser.add_argument("--dry-run", action="store_true", help="Dry run mode")
     args = parser.parse_args()
 
     orchestrator = EvolutionOrchestrator(
         force_window=args.force,
         skip_git=args.skip_git,
+        skip_preflight=args.skip_preflight,
         dry_run=args.dry_run
     )
     result = orchestrator.execute_cycle()
