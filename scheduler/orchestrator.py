@@ -31,13 +31,14 @@ from scheduler.state import (
 )
 from scheduler.quality_gate import run_quality_gates
 from evolution.ledger import (
+    load_knowledge_state,
     hash_knowledge_state,
     hash_proposal,
     append_ledger_event,
 )
 from evolution.shadow import record_shadow_candidate
 from evolution.manifest import create_cycle_manifest
-from evolution.post_evaluator import evaluate_proposal_impact
+from evolution.post_evaluator import evaluate_proposal_impact, attach_post_evaluation
 
 
 def log(phase: str, message: str) -> None:
@@ -120,8 +121,15 @@ class EvolutionOrchestrator:
         log("STATE", f"Cycle {cycle_id} initiated. Status: PREFLIGHT -> RUNNING")
 
         try:
-            # Capture initial state hash and git SHA
-            initial_state_hash = hash_knowledge_state()
+            # Capture initial real state snapshot and git SHA
+            initial_state = load_knowledge_state()
+            initial_state_hash = hash_knowledge_state(initial_state)
+            dataset_counts_before = {
+                "questions": len(initial_state.get("questions", [])),
+                "signals": len(initial_state.get("signals", [])),
+                "relations": len(initial_state.get("relations", [])),
+            }
+
             code_head, head_out, _ = self.runner(["git", "rev-parse", "HEAD"])
             main_before_sha = head_out.strip() if code_head == 0 else "unknown"
 
@@ -191,14 +199,23 @@ class EvolutionOrchestrator:
                 initial_state_hash=initial_state_hash
             )
 
-            # 12. Publish Proposal into Working Tree
+            # 12. Workspace Branch Isolation & Publishing
+            branch_name = f"agent/evolution-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+            pr_url = None
+            proposal_commit_sha = None
+
+            if not self.skip_git:
+                log("BRANCH", f"Creating isolated evolution branch {branch_name}...")
+                self.runner(["git", "checkout", "-b", branch_name])
+
+            # 13. Publish Proposal into Working Tree (Isolated on Feature Branch)
             log("PUBLISH", "Publishing proposal into canonical dataset...")
             update_phase("PUBLISHING")
             code, out, err = self.runner([sys.executable, str(ROOT / "validators/publish_proposal.py")])
             if code != 0:
                 raise RuntimeError(f"publish_proposal failed: {err or out}")
 
-            # 13. Run Full Quality Gates
+            # 14. Run Full Quality Gates
             log("QUALITY_GATE", "Running comprehensive quality gates...")
             update_phase("QUALITY_GATES")
             all_gates_pass, gate_results = run_quality_gates(verbose=True, runner_fn=self.runner)
@@ -206,16 +223,25 @@ class EvolutionOrchestrator:
                 failed_gates = [g["gate"] for g in gate_results if not g["passed"]]
                 raise RuntimeError(f"Quality gates failed: {', '.join(failed_gates)}")
 
-            # 14. Git Branch, Commit, Push & PR Lifecycle
-            branch_name = f"agent/evolution-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-            pr_url = None
-            proposal_commit_sha = None
+            # 15. Capture Resulting State Dynamically & Compute Empirical Post-Evaluation
+            resulting_state = load_knowledge_state()
+            resulting_state_hash = hash_knowledge_state(resulting_state)
+            dataset_counts_after = {
+                "questions": len(resulting_state.get("questions", [])),
+                "signals": len(resulting_state.get("signals", [])),
+                "relations": len(resulting_state.get("relations", [])),
+            }
 
+            post_eval = evaluate_proposal_impact(
+                state_before=initial_state,
+                proposal=prop,
+                state_after=resulting_state
+            )
+            attach_post_evaluation(cycle_id=cycle_id, evaluation_result=post_eval)
+
+            # 16. Git Commit, Push & PR Lifecycle
             if not self.skip_git:
-                log("BRANCH", f"Creating evolution branch {branch_name}...")
-                self.runner(["git", "checkout", "-b", branch_name])
                 self.runner(["git", "add", "-A"])
-
                 code, diff_out, _ = self.runner(["git", "diff", "--cached", "--quiet"])
                 if code == 0:
                     log("BRANCH", "No changes produced by proposal. Exiting cleanly.")
@@ -226,8 +252,6 @@ class EvolutionOrchestrator:
 
                 log("COMMIT", "Committing proposed knowledge...")
                 code, c_out, _ = self.runner(["git", "commit", "-m", f"agent: propose knowledge evolution {proposal_id}"])
-
-                # Get commit SHA
                 code_sha, sha_out, _ = self.runner(["git", "rev-parse", "HEAD"])
                 if code_sha == 0:
                     proposal_commit_sha = sha_out.strip()
@@ -255,18 +279,25 @@ class EvolutionOrchestrator:
                     pr_url = pr_out.strip()
                     log("PR", f"Pull request created: {pr_url}")
 
-                # Check auto-merge kill switch
                 if is_auto_merge_enabled():
                     log("AUTO_MERGE", "Auto-merge enabled. Requesting PR squash merge...")
                     self.runner(["gh", "pr", "merge", branch_name, "--squash", "--delete-branch"])
                 else:
                     log("AUTO_MERGE", "Auto-merge disabled (Shadow Mode). PR left for observation.")
-                    # Return to main and clean up branch workspace
+                    # Return to main and verify No-Silent-Mutation Guard on main
                     self.runner(["git", "checkout", "main"])
+                    state_on_main = hash_knowledge_state()
+                    if state_on_main != initial_state_hash:
+                        raise RuntimeError("SHADOW_MUTATION_DETECTED: Dataset on main was mutated during shadow observation")
 
-            # 15. Create Cycle Manifest & Record Success
+            # 17. Create Cycle Manifest
             question_id = prop.get("question", {}).get("id") or prop.get("question", {}).get("question_id")
-            resulting_state_hash = hash_knowledge_state()
+
+            predicted_metrics = {
+                "novelty_score": float(prop.get("novelty_score", 0.85)),
+                "coverage_gain": float(prop.get("coverage_gain", 0.20)),
+                "confidence": float(confidence),
+            }
 
             create_cycle_manifest(
                 cycle_id=cycle_id,
@@ -274,10 +305,10 @@ class EvolutionOrchestrator:
                 state_before_hash=initial_state_hash,
                 state_after_hash=resulting_state_hash,
                 proposal_hash=hash_proposal(prop),
-                dataset_counts_before={"questions": 1, "signals": 1, "relations": 0},
-                dataset_counts_after={"questions": 2, "signals": 1, "relations": 0},
-                predicted_metrics={"novelty_score": float(prop.get("novelty_score", 0.85)), "coverage_gain": float(prop.get("coverage_gain", 0.20)), "confidence": float(confidence)},
-                observed_metrics={"domain_coverage_delta": 0.0, "signal_coverage_delta": 0.0, "redundancy": 0.0},
+                dataset_counts_before=dataset_counts_before,
+                dataset_counts_after=dataset_counts_after,
+                predicted_metrics=predicted_metrics,
+                observed_metrics=post_eval.get("observed", {}),
                 gate_verdict={"valid": True, "safe": True, "classification": "PREDICTED_IMPROVEMENT"},
                 action_taken="SHADOW_RECORDED",
                 timestamp_start=timestamp_start

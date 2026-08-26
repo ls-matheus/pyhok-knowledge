@@ -93,8 +93,6 @@ def test_evaluate_proposal_impact_jaccard_similarity():
     eval_result = evaluate_proposal_impact(state_before, proposal, state_after)
     assert eval_result["observed"]["redundancy"] == pytest.approx(0.6667, abs=1e-3)
     assert eval_result["observed"]["signal_coverage_delta"] == pytest.approx(1 / 3, abs=1e-3)
-
-
 # ----------------------------------------------------------------------
 # 2. Meta-Metrics Engine Unit Tests
 # ----------------------------------------------------------------------

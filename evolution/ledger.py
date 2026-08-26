@@ -43,21 +43,17 @@ def compute_sha256(data: Any) -> str:
     return f"sha256:{digest}"
 
 
-def hash_knowledge_state(state_data: dict[str, Any] | None = None) -> str:
+def load_knowledge_state(data_dir: Path = DATA_DIR) -> dict[str, Any]:
     """
-    Computes a canonical SHA-256 hash of the entire knowledge dataset state.
+    Loads full structured knowledge state from data directory.
     """
-    if state_data is not None:
-        return compute_sha256(state_data)
-
-    # Read from data/ directory
     extracted_state: dict[str, Any] = {
         "signals": [],
         "questions": [],
         "relations": []
     }
 
-    signals_dir = DATA_DIR / "signals"
+    signals_dir = data_dir / "signals"
     if signals_dir.exists():
         for path in sorted(signals_dir.glob("*.json")):
             try:
@@ -65,7 +61,7 @@ def hash_knowledge_state(state_data: dict[str, Any] | None = None) -> str:
             except Exception:
                 pass
 
-    questions_dir = DATA_DIR / "questions"
+    questions_dir = data_dir / "questions"
     if questions_dir.exists():
         for path in sorted(questions_dir.glob("*.json")):
             try:
@@ -73,7 +69,7 @@ def hash_knowledge_state(state_data: dict[str, Any] | None = None) -> str:
             except Exception:
                 pass
 
-    relations_dir = DATA_DIR / "relations"
+    relations_dir = data_dir / "relations"
     if relations_dir.exists():
         for path in sorted(relations_dir.glob("*.json")):
             try:
@@ -81,6 +77,17 @@ def hash_knowledge_state(state_data: dict[str, Any] | None = None) -> str:
             except Exception:
                 pass
 
+    return extracted_state
+
+
+def hash_knowledge_state(state_data: dict[str, Any] | None = None, data_dir: Path = DATA_DIR) -> str:
+    """
+    Computes a canonical SHA-256 hash of the entire knowledge dataset state.
+    """
+    if state_data is not None:
+        return compute_sha256(state_data)
+
+    extracted_state = load_knowledge_state(data_dir)
     return compute_sha256(extracted_state)
 
 
