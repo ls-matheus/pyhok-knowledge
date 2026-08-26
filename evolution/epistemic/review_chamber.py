@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
@@ -13,8 +14,9 @@ from evolution.epistemic.quarantine import record_quarantined_claim, check_prior
 
 class EpistemicReviewChamber:
     """
-    Coordinates the parallel multi-agent epistemic review chamber (v2):
+    Coordinates the parallel multi-agent epistemic review chamber (v2.1):
     Generator -> [Critic || Verifier || Red-Team || Active Memory] -> Blind Judge -> (Accept / Quarantine).
+    Uses ThreadPoolExecutor for true concurrent peer execution while ensuring absolute determinism.
     """
 
     def __init__(
@@ -24,32 +26,66 @@ class EpistemicReviewChamber:
         red_team: AlternativeExplanationAgent | None = None,
         judge: BlindEpistemicJudge | None = None,
         quarantine_file: Path = REJECTED_CLAIMS_FILE,
+        parallel_workers: int = 4,
     ):
         self.critic = critic or AdversarialCritic()
         self.verifier = verifier or EvidenceVerifier()
         self.red_team = red_team or AlternativeExplanationAgent()
         self.judge = judge or BlindEpistemicJudge()
         self.quarantine_file = quarantine_file
+        self.parallel_workers = max(1, parallel_workers)
 
     def review(
         self,
-        proposal: dict[str, Any],
+        proposal: dict[str, Any] | None,
         knowledge_state: dict[str, Any] | None = None,
         cycle_id: str | None = None,
     ) -> dict[str, Any]:
-        # 1. Adversarial Critic Review (Parallel Peer 1)
-        critic_review = self.critic.review_proposal(proposal, knowledge_state)
+        if not proposal or not isinstance(proposal, dict):
+            fallback_judge = self.judge.judge(None, None, None)
+            return {
+                "status": "REJECT",
+                "decision": "REJECT",
+                "judge_ruling": fallback_judge,
+                "critic_review": {},
+                "verifier_review": {},
+                "red_team_review": {},
+                "memory_review": {},
+                "reviewed_proposal": proposal,
+            }
 
-        # 2. Evidence & Provenance Verification (Parallel Peer 2)
-        verifier_review = self.verifier.verify_provenance(proposal, knowledge_state)
+        # 1. Execute 4 isolated peer reviews in parallel
+        critic_review: dict[str, Any] = {}
+        verifier_review: dict[str, Any] = {}
+        red_team_review: dict[str, Any] = {}
+        memory_review: dict[str, Any] = {}
 
-        # 3. Red-Team / Alternative Explanation Review (Parallel Peer 3)
-        red_team_review = self.red_team.evaluate_alternatives(proposal, knowledge_state)
+        tasks = {
+            "critic": lambda: self.critic.review_proposal(proposal, knowledge_state),
+            "verifier": lambda: self.verifier.verify_provenance(proposal, knowledge_state),
+            "red_team": lambda: self.red_team.evaluate_alternatives(proposal, knowledge_state),
+            "memory": lambda: check_prior_rejections(proposal, file_path=self.quarantine_file),
+        }
 
-        # 4. Active Negative Memory Review (Parallel Peer 4)
-        memory_review = check_prior_rejections(proposal, file_path=self.quarantine_file)
+        with ThreadPoolExecutor(max_workers=self.parallel_workers) as executor:
+            future_to_key = {executor.submit(fn): key for key, fn in tasks.items()}
+            for future in as_completed(future_to_key):
+                key = future_to_key[future]
+                try:
+                    result = future.result()
+                except Exception as exc:
+                    result = {"error": str(exc), "status": "FAIL"}
 
-        # 5. Blind Epistemic Judgment
+                if key == "critic":
+                    critic_review = result
+                elif key == "verifier":
+                    verifier_review = result
+                elif key == "red_team":
+                    red_team_review = result
+                elif key == "memory":
+                    memory_review = result
+
+        # 2. Blind Epistemic Judgment (Deterministic input order)
         judge_ruling = self.judge.judge(
             proposal=proposal,
             critic_review=critic_review,
@@ -60,7 +96,7 @@ class EpistemicReviewChamber:
 
         decision = judge_ruling.get("decision")
 
-        # 6. Handle Outcome
+        # 3. Controlled Persistence (Only if not ACCEPT)
         if decision in ("QUARANTINE", "REJECT"):
             record_quarantined_claim(
                 proposal=proposal,
@@ -72,12 +108,12 @@ class EpistemicReviewChamber:
                 file_path=self.quarantine_file
             )
 
-        # Inject epistemic metadata into question if ACCEPTED
+        # 4. Attach Provenance Metadata to Proposal if ACCEPTED
         elif decision == "ACCEPT":
-            q_data = proposal.get("question") if "question" in proposal else proposal
+            q_data = proposal.get("question") if isinstance(proposal.get("question"), dict) else proposal
             if isinstance(q_data, dict):
                 q_data["epistemic_status"] = judge_ruling.get("assigned_epistemic_status", "HYPOTHESIS")
-                if "provenance" not in q_data:
+                if "provenance" not in q_data or not isinstance(q_data["provenance"], dict):
                     q_data["provenance"] = {}
                 q_data["provenance"]["epistemic_status"] = q_data["epistemic_status"]
                 q_data["provenance"]["derived_from"] = q_data["provenance"].get("derived_from", [])
@@ -106,7 +142,7 @@ class EpistemicReviewChamber:
 
 
 def run_epistemic_review(
-    proposal: dict[str, Any],
+    proposal: dict[str, Any] | None,
     knowledge_state: dict[str, Any] | None = None,
     cycle_id: str | None = None,
     quarantine_file: Path = REJECTED_CLAIMS_FILE,

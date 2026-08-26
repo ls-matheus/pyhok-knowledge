@@ -180,7 +180,7 @@ def test_chaos_quality_gate_failure_aborts_cycle(tmp_path, monkeypatch):
             "coverage_gain": 0.20,
             "question": {
                 "id": "q_test_gate_fail",
-                "hypothesis": "Valid hypothesis regarding attentional focus decay.",
+                "hypothesis": "Valid hypothesis regarding attentional focus decay, controlling for dpi scaling and sensor noise.",
                 "required_signals": ["sig_test_pointer_velocity"],
                 "evaluation_trigger": {
                     "logical_operator": "AND",
@@ -249,7 +249,7 @@ def test_terminal_no_silent_mutation_guard_detects_dirty_main(tmp_path, monkeypa
             "coverage_gain": 0.20,
             "question": {
                 "id": "q_test_mutation",
-                "hypothesis": "Hypothesis about motor activation and focus stability.",
+                "hypothesis": "Hypothesis about motor activation and focus stability, controlling for dpi scaling and sensor noise.",
                 "required_signals": ["sig_test_pointer_velocity"],
                 "evaluation_trigger": {
                     "logical_operator": "AND",
