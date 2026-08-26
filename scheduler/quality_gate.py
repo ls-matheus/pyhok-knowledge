@@ -36,12 +36,14 @@ def run_quality_gates(
             "tests/unit/test_evolution_ledger.py",
             "tests/unit/test_post_evaluator_and_metrics.py",
             "tests/unit/test_baseline_and_shadow_report.py",
-            "tests/unit/test_measurement_gate.py"
+            "tests/unit/test_measurement_gate.py",
+            "tests/unit/test_epistemic_firewall.py"
         ]),
         ("validate_dataset", [sys.executable, str(ROOT / "validators/validate_dataset.py")]),
         ("conflict_check", [sys.executable, str(ROOT / "scripts/conflict_check.py")]),
         ("validate_proposal_tool", [sys.executable, str(ROOT / "tools/validate_proposal.py")]),
         ("measurement_gate", [sys.executable, str(ROOT / "evolution/measurement_gate.py")]),
+        ("epistemic_gate", [sys.executable, str(ROOT / "evolution/epistemic_gate.py")]),
         ("git_diff_check", ["git", "diff", "--check"]),
     ]
 

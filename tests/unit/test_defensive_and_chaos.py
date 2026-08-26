@@ -153,8 +153,6 @@ def test_chaos_llm_api_failure_handled_gracefully(tmp_path, monkeypatch):
 
     orch = EvolutionOrchestrator(
         policy_path=policy_file,
-        ledger_path=tmp_path / "ledger.jsonl",
-        manifests_dir=tmp_path / "manifests",
         skip_git=True,
         skip_preflight=True,
         force_window=True,
@@ -179,7 +177,33 @@ def test_chaos_quality_gate_failure_aborts_cycle(tmp_path, monkeypatch):
             "opportunity_id": "opp_test",
             "confidence": 0.90,
             "novelty_score": 0.85,
-            "coverage_gain": 0.20
+            "coverage_gain": 0.20,
+            "question": {
+                "id": "q_test_gate_fail",
+                "hypothesis": "Valid hypothesis regarding attentional focus decay.",
+                "required_signals": ["sig_test_pointer_velocity"],
+                "evaluation_trigger": {
+                    "logical_operator": "AND",
+                    "rules": [
+                        {"signal_id": "sig_test_pointer_velocity", "operator": ">", "threshold": 0.5, "window_ms": 100}
+                    ]
+                },
+                "evaluation_model": {
+                    "method_id": "method_rolling_mean",
+                    "version": "1.0.0",
+                    "parameters": {}
+                },
+                "evidence_model": {
+                    "base_strength": 0.8,
+                    "decay_rate_per_sec": 0.05
+                },
+                "cortex_weights": {
+                    "focus": 0.5,
+                    "stress": -0.2,
+                    "autonomy": 0.3,
+                    "fatigue": -0.1
+                }
+            }
         }
     }))
 
@@ -201,8 +225,7 @@ def test_chaos_quality_gate_failure_aborts_cycle(tmp_path, monkeypatch):
 
     orch = EvolutionOrchestrator(
         policy_path=policy_file,
-        ledger_path=tmp_path / "ledger.jsonl",
-        manifests_dir=tmp_path / "manifests",
+        quarantine_file=tmp_path / "rejected_claims.jsonl",
         skip_git=True,
         skip_preflight=True,
         force_window=True,
@@ -223,7 +246,33 @@ def test_terminal_no_silent_mutation_guard_detects_dirty_main(tmp_path, monkeypa
             "opportunity_id": "opp_test",
             "confidence": 0.90,
             "novelty_score": 0.85,
-            "coverage_gain": 0.20
+            "coverage_gain": 0.20,
+            "question": {
+                "id": "q_test_mutation",
+                "hypothesis": "Hypothesis about motor activation and focus stability.",
+                "required_signals": ["sig_test_pointer_velocity"],
+                "evaluation_trigger": {
+                    "logical_operator": "AND",
+                    "rules": [
+                        {"signal_id": "sig_test_pointer_velocity", "operator": ">", "threshold": 0.5, "window_ms": 100}
+                    ]
+                },
+                "evaluation_model": {
+                    "method_id": "method_rolling_mean",
+                    "version": "1.0.0",
+                    "parameters": {}
+                },
+                "evidence_model": {
+                    "base_strength": 0.8,
+                    "decay_rate_per_sec": 0.05
+                },
+                "cortex_weights": {
+                    "focus": 0.5,
+                    "stress": -0.2,
+                    "autonomy": 0.3,
+                    "fatigue": -0.1
+                }
+            }
         }
     }))
 
@@ -251,7 +300,8 @@ def test_terminal_no_silent_mutation_guard_detects_dirty_main(tmp_path, monkeypa
         policy_path=policy_file,
         ledger_path=tmp_path / "ledger.jsonl",
         manifests_dir=tmp_path / "manifests",
-        evaluations_path=tmp_path / "evaluations.jsonl",
+        evaluations_path=tmp_path / "post_evaluations.jsonl",
+        quarantine_file=tmp_path / "rejected_claims.jsonl",
         skip_git=False,
         skip_preflight=True,
         force_window=True,
