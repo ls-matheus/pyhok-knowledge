@@ -1,6 +1,6 @@
 {
   "id": "q_motor_instability_pointer_velocity_deviation",
-  "hypothesis": "O padrão observacional apresenta desvio significativo na velocidade do ponteiro em comparação com a linha de base individual, sem assumir caráter diagnóstico.",
+  "hypothesis": "Variações na velocidade do ponteiro em relação à linha de base individual podem indicar alteração na dinâmica motora.",
   "required_signals": [
     "sig_test_pointer_velocity"
   ],
@@ -25,9 +25,9 @@
     "decay_rate_per_sec": 0.1
   },
   "cortex_weights": {
-    "focus": 0.2,
-    "stress": 0.2,
-    "autonomy": 0.1,
-    "fatigue": 0.5
+    "focus": 0.0,
+    "stress": 0.3,
+    "autonomy": 0.0,
+    "fatigue": 0.2
   }
 }
