@@ -228,3 +228,121 @@ def test_epistemic_firewall_gate_detects_circular_reinforcement(tmp_path):
     passed, errors = check_epistemic_firewall(questions_dir=q_dir, relations_dir=r_dir)
     assert passed is False
     assert any("CIRCULAR_REINFORCEMENT_DETECTED" in e for e in errors)
+
+
+# ----------------------------------------------------------------------
+# 6. Red-Team / Alternative Explanation Tests
+# ----------------------------------------------------------------------
+
+from evolution.epistemic.red_team import AlternativeExplanationAgent
+from evolution.epistemic.quarantine import check_prior_rejections
+
+
+def test_red_team_identifies_confounders_and_alternative_hypotheses():
+    red_team = AlternativeExplanationAgent()
+    proposal = {
+        "question": {
+            "id": "q_gaze_decay",
+            "hypothesis": "Hypothesis proposing cognitive decay from raw gaze fixation without modeling screen glare.",
+            "required_signals": ["sig_gaze_fixation_duration_v1"],
+            "evaluation_trigger": {
+                "rules": [{"signal_id": "sig_gaze_fixation_duration_v1", "operator": "<", "threshold": 200, "window_ms": 100}]
+            }
+        }
+    }
+    review = red_team.evaluate_alternatives(proposal)
+    assert len(review["confounders_identified"]) > 0
+    assert any("glare" in h or "distraction" in h or "fatigue" in h for h in review["alternative_hypotheses"])
+
+
+def test_red_team_penalizes_overcomplicated_rules_occam_razor():
+    red_team = AlternativeExplanationAgent()
+    proposal = {
+        "question": {
+            "id": "q_complex",
+            "hypothesis": "Complex hypothesis with 5 arbitrary rules.",
+            "required_signals": ["sig_test_pointer_velocity"],
+            "evaluation_trigger": {
+                "rules": [
+                    {"signal_id": "sig_test_pointer_velocity", "operator": ">", "threshold": 1.0, "window_ms": 10},
+                    {"signal_id": "sig_test_pointer_velocity", "operator": "<", "threshold": 5.0, "window_ms": 20},
+                    {"signal_id": "sig_test_pointer_velocity", "operator": ">", "threshold": 2.0, "window_ms": 30},
+                    {"signal_id": "sig_test_pointer_velocity", "operator": "<", "threshold": 4.0, "window_ms": 40},
+                    {"signal_id": "sig_test_pointer_velocity", "operator": ">", "threshold": 3.0, "window_ms": 50},
+                ]
+            }
+        }
+    }
+    review = red_team.evaluate_alternatives(proposal)
+    assert review["parsimony_score"] < 1.0
+    assert any("Occam" in h or "complexity" in h or "simpler" in h for h in review["alternative_hypotheses"])
+
+
+# ----------------------------------------------------------------------
+# 7. Active Negative Memory & Multidimensional Vector Tests
+# ----------------------------------------------------------------------
+
+def test_active_negative_memory_detects_disguised_repetition(tmp_path):
+    rej_file = tmp_path / "rejected_claims.jsonl"
+    prior_proposal = {
+        "proposal_id": "prop_old_fail_42",
+        "question": {"hypothesis": "Persistent distal tremor indicates cognitive breakdown and attentional collapse."}
+    }
+    record_quarantined_claim(
+        proposal=prior_proposal,
+        judge_ruling={"decision": "REJECT", "quarantine_reason": "FATAL_CIRCULARITY_DETECTED", "epistemic_score": 0.0},
+        file_path=rej_file
+    )
+
+    # New disguised proposal with high word overlap
+    new_proposal = {
+        "proposal_id": "prop_new_attempt",
+        "question": {"hypothesis": "Persistent distal tremor indicates attentional breakdown and cognitive collapse."}
+    }
+    res = check_prior_rejections(new_proposal, file_path=rej_file)
+    assert res["has_prior_rejection"] is True
+    assert res["highest_similarity"] >= 0.70
+    assert "prop_old_fail_42" in res["repetition_warning"]
+
+
+def test_blind_judge_calculates_multidimensional_epistemic_vector():
+    judge = BlindEpistemicJudge()
+    proposal = {
+        "question": {"id": "q_multidim", "hypothesis": "Valid empirical hypothesis."}
+    }
+    critic_review = {
+        "passes_adversarial_check": True,
+        "severity_score": 0.10,
+        "contradictions": [],
+        "challenges": []
+    }
+    verifier_review = {
+        "passes_verification": True,
+        "derivation_depth": 1,
+        "independent_evidence_count": 2,
+        "circularity_detected": False,
+        "errors": []
+    }
+    red_team_review = {
+        "passes_red_team_check": True,
+        "resistance_to_alternatives": 0.85,
+        "parsimony_score": 0.90,
+        "alternative_hypotheses": []
+    }
+
+    ruling = judge.judge(
+        proposal=proposal,
+        critic_review=critic_review,
+        verifier_review=verifier_review,
+        red_team_review=red_team_review
+    )
+    assert ruling["decision"] == "ACCEPT"
+    vec = ruling["epistemic_vector"]
+    assert "evidence_strength" in vec
+    assert "logical_consistency" in vec
+    assert "independence" in vec
+    assert "alternative_explanation_resistance" in vec
+    assert "provenance_integrity" in vec
+    assert vec["logical_consistency"] == 0.90
+    assert vec["provenance_integrity"] == 1.0
+    assert ruling["epistemic_score"] >= 0.80
