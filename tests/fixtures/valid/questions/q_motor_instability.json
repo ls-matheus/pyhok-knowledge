@@ -16,6 +16,11 @@
       }
     ]
   },
+  "evaluation_model": {
+    "method_id": "method_baseline_deviation",
+    "version": "1.0.0",
+    "parameters": {}
+  },
   "evidence_model": {
     "base_strength": 0.8,
     "decay_rate_per_sec": 0.15

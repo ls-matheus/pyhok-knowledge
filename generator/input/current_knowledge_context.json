@@ -1,0 +1,195 @@
+{
+  "context_version": "1.0.0",
+  "context_type": "CURRENT_KNOWLEDGE_CONTEXT",
+  "purpose": "Representar exclusivamente o estado atual conhecido do Knowledge Graph do PyHok para uso pelo agente de evolução.",
+  "authority": {
+    "source": "repository",
+    "rule": "Somente informações presentes no estado atual do repositório são consideradas conhecidas.",
+    "unknown_policy": "Tudo que não estiver presente deve ser tratado como UNKNOWN."
+  },
+  "mission": {
+    "mission_id": "pyhok_core_mission",
+    "mission_version": "1.0.0",
+    "status": "ACTIVE",
+    "objective": "Construir e refinar uma rede de hipóteses observacionais capaz de representar padrões relacionados à atenção, dinâmica motora, carga sensorial, fadiga, estresse, autonomia e comunicação, de forma complementar, temporal e individualmente variável, para posterior avaliação determinística pela Sinapse.",
+    "scope": {
+      "knowledge_repository": true,
+      "runtime_execution": false,
+      "user_telemetry": false,
+      "diagnosis": false
+    },
+    "domains": [
+      "attention_disruption",
+      "motor_instability",
+      "sensory_overload",
+      "fatigue",
+      "stress",
+      "autonomy",
+      "communication_hesitation",
+      "temporal_dynamics",
+      "cross_modal_interaction",
+      "recovery_dynamics"
+    ],
+    "principles": [
+      "individual_variability",
+      "non_diagnostic_single_signal",
+      "multi_evidence_reasoning",
+      "complementary_hypotheses",
+      "contradiction_detection",
+      "temporal_reasoning",
+      "cross_modal_reasoning",
+      "uncertainty_preservation",
+      "method_separation",
+      "observation_separation",
+      "novelty_over_redundancy",
+      "graph_coherence"
+    ],
+    "forbidden_inferences": [
+      "single_signal_diagnosis",
+      "clinical_diagnosis",
+      "syndrome_confirmation_from_single_hypothesis",
+      "causal_claim_without_defined_evidence",
+      "unsupported_sensor_behavior",
+      "unsupported_evaluation_method",
+      "runtime_capability_creation"
+    ]
+  },
+  "evolution_policy": {
+    "policy_id": "pyhok_evolution_policy",
+    "policy_version": "1.0.0",
+    "status": "ACTIVE",
+    "scheduler": {
+      "enabled": true,
+      "timezone": "America/Sao_Paulo",
+      "start": "08:00",
+      "end": "20:00",
+      "tick_minutes": 30
+    },
+    "limits": {
+      "max_proposals_per_run": 3,
+      "max_iterations_per_run": 3,
+      "max_consecutive_rejections": 2,
+      "minimum_novelty_score": 0.7,
+      "minimum_coverage_gain": 0.15,
+      "minimum_confidence_in_proposal": 0.8
+    },
+    "allowed_proposal_types": [
+      "QUESTION_CREATE",
+      "QUESTION_UPDATE",
+      "RELATION_CREATE"
+    ],
+    "rules": {
+      "agent_may_modify_runtime": false,
+      "agent_may_modify_policy": false,
+      "agent_may_modify_schema": false,
+      "agent_may_create_method": false,
+      "agent_may_create_unknown_signal": false,
+      "agent_may_publish_without_validation": false,
+      "require_existing_signal": true,
+      "require_supported_method": true,
+      "require_unique_question_id": true,
+      "require_graph_consistency": true,
+      "require_mission_alignment": true,
+      "require_structured_justification": true
+    },
+    "stop_conditions": [
+      "window_closed",
+      "proposal_limit_reached",
+      "iteration_limit_reached",
+      "consecutive_rejection_limit_reached",
+      "no_useful_change"
+    ]
+  },
+  "knowledge_graph": {
+    "signals": [
+      {
+        "id": "sig_test_pointer_velocity",
+        "kind": "RAW",
+        "source": "pointer",
+        "data_type": "scalar",
+        "unit": "pixels_per_second",
+        "temporal_window_ms": 0,
+        "quality": {
+          "metric_id": "self",
+          "minimum_acceptable": 0.9,
+          "missing_is_zero": false
+        },
+        "privacy": {
+          "classification": "ANONYMOUS_METRIC",
+          "local_only": true,
+          "retention": "SESSION"
+        }
+      }
+    ],
+    "questions": [],
+    "relations": [],
+    "methods": [
+      {
+        "method_id": "method_threshold",
+        "version": "1.0.0",
+        "status": "SUPPORTED",
+        "description": "Avaliação baseada em comparação com limiar.",
+        "engine_contract": {
+          "component": "sinapse.evidence_engine"
+        }
+      },
+      {
+        "method_id": "method_baseline_deviation",
+        "version": "1.0.0",
+        "status": "SUPPORTED",
+        "description": "Avaliação baseada em desvio relativo a uma linha de base.",
+        "engine_contract": {
+          "component": "sinapse.evidence_engine"
+        }
+      },
+      {
+        "method_id": "method_persistence",
+        "version": "1.0.0",
+        "status": "SUPPORTED",
+        "description": "Avaliação baseada na persistência temporal de um padrão.",
+        "engine_contract": {
+          "component": "sinapse.evidence_engine"
+        }
+      }
+    ]
+  },
+  "derived_state": {
+    "signal_count": 1,
+    "question_count": 0,
+    "relation_count": 0,
+    "method_count": 3,
+    "domains_with_questions": [],
+    "domains_without_questions": [
+      "attention_disruption",
+      "autonomy",
+      "communication_hesitation",
+      "cross_modal_interaction",
+      "fatigue",
+      "motor_instability",
+      "recovery_dynamics",
+      "sensory_overload",
+      "stress",
+      "temporal_dynamics"
+    ],
+    "questions_without_relations": [],
+    "relations_with_missing_targets": [],
+    "questions_with_missing_signals": [],
+    "questions_with_missing_methods": []
+  },
+  "constraints": {
+    "must_not_invent_signals": true,
+    "must_not_invent_questions": true,
+    "must_not_invent_methods": true,
+    "must_not_invent_relations": true,
+    "must_not_invent_runtime_capabilities": true,
+    "must_not_invent_identifiers": true,
+    "must_preserve_uncertainty": true,
+    "must_preserve_individual_variability": true,
+    "must_remain_non_diagnostic": true,
+    "must_use_existing_evaluation_methods": true
+  },
+  "status": {
+    "state": "CURRENT",
+    "generated_from_repository": true
+  }
+}

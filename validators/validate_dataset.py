@@ -24,14 +24,23 @@ def validate_schema(instance, schema_name):
     schema_path = SCHEMA_DIR / schema_name
     schema = load_schema(schema_name)
 
+    schema_store = {}
+    for path in SCHEMA_DIR.glob("*.json"):
+        s = load_json(path)
+        if "$id" in s:
+            schema_store[s["$id"]] = s
+        schema_store[path.name] = s
+        schema_store[path.resolve().as_uri()] = s
+
     resolver = RefResolver(
         schema_path.resolve().as_uri(),
-        schema
+        schema,
+        store=schema_store,
     )
 
     validator = Draft7Validator(
         schema,
-        resolver=resolver
+        resolver=resolver,
     )
 
     errors = sorted(validator.iter_errors(instance), key=str)
