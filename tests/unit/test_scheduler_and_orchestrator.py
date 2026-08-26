@@ -195,7 +195,7 @@ def test_state_lifecycle(tmp_path, monkeypatch):
 def test_quality_gate_passes_on_clean_repository():
     all_passed, results = run_quality_gates(verbose=False)
     assert all_passed is True
-    assert len(results) == 5
+    assert len(results) == 6
     for r in results:
         assert r["passed"] is True, f"Gate {r['gate']} failed with: {r['stderr']}"
 

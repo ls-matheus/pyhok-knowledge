@@ -27,7 +27,7 @@ def capture_baseline(root: Path = ROOT) -> dict[str, Any]:
         main_sha = "unknown"
 
     # 2. Dataset State
-    state_hash = hash_knowledge_state()
+    state_hash = hash_knowledge_state(data_dir=root / "data")
 
     # Load questions, signals, relations, methods
     questions = []
@@ -83,11 +83,16 @@ def capture_baseline(root: Path = ROOT) -> dict[str, Any]:
     # Find domains covered by questions (extracted from question context/trigger/signals)
     covered_domains = set()
     for q in questions:
+        # Check explicit domain
+        dom = q.get("domain")
+        if isinstance(dom, str) and dom in all_domains:
+            covered_domains.add(dom)
+            continue
         # Check hypothesis or id for domain references
         qid = q.get("id", "")
-        for dom in all_domains:
-            if dom in qid:
-                covered_domains.add(dom)
+        for m_dom in all_domains:
+            if m_dom in qid:
+                covered_domains.add(m_dom)
 
     total_domains = max(1, len(all_domains))
     coverage = len(covered_domains) / total_domains
@@ -112,9 +117,11 @@ def capture_baseline(root: Path = ROOT) -> dict[str, Any]:
         "coverage": round(coverage, 4),
         "graph_density": round(density, 4),
         "redundancy": 0.0,
-        "known_gaps": known_gaps,
+        "known_gaps": sorted(known_gaps),
         "covered_domain_list": sorted(list(covered_domains))
     }
+    # Compute cryptographic digest for the baseline content
+    baseline_data["baseline_hash"] = compute_sha256(baseline_data)
     return baseline_data
 
 
@@ -135,3 +142,28 @@ def load_baseline(baseline_path: Path = BASELINE_FILE) -> dict[str, Any]:
         save_baseline(data, baseline_path)
         return data
     return json.loads(baseline_path.read_text(encoding="utf-8"))
+
+
+def verify_baseline_integrity(baseline_path: Path = BASELINE_FILE) -> tuple[bool, str]:
+    """
+    Verifies that the frozen baseline snapshot has not been tampered with or modified.
+    """
+    if not baseline_path.exists():
+        return False, "BASELINE_MISSING: baseline.json not found"
+
+    try:
+        data = json.loads(baseline_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return False, f"BASELINE_CORRUPTED: invalid json - {exc}"
+
+    if "baseline_hash" not in data:
+        return False, "BASELINE_UNHASHED: missing baseline_hash field"
+
+    stored_hash = data["baseline_hash"]
+    data_to_verify = {k: v for k, v in data.items() if k != "baseline_hash"}
+    expected_hash = compute_sha256(data_to_verify)
+
+    if stored_hash != expected_hash:
+        return False, f"BASELINE_TAMPERED: stored {stored_hash} != computed {expected_hash}"
+
+    return True, "BASELINE_VALID"
