@@ -1,6 +1,6 @@
 {
   "id": "q_motor_instability_pointer_velocity_deviation",
-  "hypothesis": "Existe variação mensurável na velocidade do ponteiro em relação à linha de base individual compatível com instabilidade motora.",
+  "hypothesis": "O padrão observacional apresenta desvio significativo na velocidade do ponteiro em comparação com a linha de base individual, sem assumir caráter diagnóstico.",
   "required_signals": [
     "sig_test_pointer_velocity"
   ],
@@ -27,7 +27,7 @@
   "cortex_weights": {
     "focus": 0.2,
     "stress": 0.2,
-    "autonomy": 0.2,
-    "fatigue": 0.4
+    "autonomy": 0.1,
+    "fatigue": 0.5
   }
 }
