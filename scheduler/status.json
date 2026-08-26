@@ -1,7 +1,25 @@
 {
-  "status": "READY",
-  "last_run": null,
-  "last_success": null,
-  "last_release": null,
-  "last_stop_reason": null
+  "status": "SKIPPED",
+  "current_cycle_id": null,
+  "last_run": "2026-08-26T10:51:27.689355-03:00",
+  "last_success": "2026-08-26T10:51:39.958080-03:00",
+  "last_failure": null,
+  "last_error": null,
+  "last_stop_reason": "window_closed: scheduler_disabled",
+  "processed_proposals": [
+    "prop_opp_temporal_persistence_pointer_velocity"
+  ],
+  "last_opportunity_id": "opp_temporal_persistence_pointer_velocity",
+  "last_proposal_id": "prop_opp_temporal_persistence_pointer_velocity",
+  "last_question_id": "q_temporal_persistence_pointer_velocity",
+  "last_branch": null,
+  "last_pr_url": null,
+  "consecutive_rejections": 0,
+  "stats": {
+    "total_runs": 2,
+    "successful_runs": 1,
+    "failed_runs": 0,
+    "skipped_runs": 2
+  },
+  "last_release": null
 }
