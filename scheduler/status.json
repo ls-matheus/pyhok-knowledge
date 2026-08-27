@@ -5,7 +5,7 @@
   "last_success": null,
   "last_failure": null,
   "last_error": null,
-  "last_stop_reason": "PREFLIGHT_BLOCKED: dirty_workspace_unknown_files: docs/PYHOK_MASTER_ARCHITECTURE.md, evolution/epistemic/critic.py, evolution/epistemic/judge.py, evolution/epistemic/quarantine.py, evolution/epistemic/review_chamber.py, evolution/epistemic/verifier.py, evolution/evolution-policy.json, evolution/ledger.py, scheduler/orchestrator.py, scheduler/quality_gate.py, schemas/v2/agent-proposal.schema.json, schemas/v2/question.schema.json, tests/unit/test_scheduler_and_orchestrator.py, validators/validate_proposal.py, evolution/continuous_discovery_gate.py, evolution/discovery/, evolution/epistemic/synapse.py, evolution/graph/, scheduler/checkpoint.json, scheduler/continuous_engine.py, schemas/v2/contradiction.schema.json, schemas/v2/discovery-opportunity.schema.json, schemas/v2/open-thesis.schema.json, tests/fixtures/invalid/open_theses/, tests/fixtures/valid/open_theses/, tests/unit/test_continuous_discovery_engine.py, tests/unit/test_continuous_engine.py, tests/unit/test_open_thesis_and_synapse.py",
+  "last_stop_reason": "PREFLIGHT_BLOCKED: dirty_workspace_unknown_files: scheduler/continuous_engine.py, tests/unit/test_baseline_and_shadow_report.py",
   "processed_proposals": [],
   "last_opportunity_id": null,
   "last_proposal_id": null,
@@ -31,7 +31,7 @@
     "successful_runs": 0,
     "failed_runs": 0,
     "skipped_runs": 0,
-    "blocked_runs": 3,
+    "blocked_runs": 8,
     "circuit_breaker_trips": 0
   }
 }
