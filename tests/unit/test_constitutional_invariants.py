@@ -245,3 +245,117 @@ def test_constitution_fail_closed_on_malformed_and_hostile_inputs():
     chamber = EpistemicReviewChamber()
     res = chamber.review(None)
     assert res["decision"] == "REJECT"
+
+
+# ---------------------------------------------------------------------------
+# 6. Deep Forensic Hardening Tests (Non-Mutation, Idempotence, Transitive 5-Node)
+# ---------------------------------------------------------------------------
+
+def test_constitution_sanitizer_does_not_mutate_original_object():
+    original_proposal = {
+        "confidence": 0.95,
+        "question": {
+            "id": "q_immutability",
+            "hypothesis": "Hypothesis testing sanitizer immutability.",
+            "nested_weights": {"internal_weights": 0.5, "valid_param": 10}
+        }
+    }
+    serialized_before = json.dumps(original_proposal, sort_keys=True)
+    sanitized = sanitize_proposal_for_judge(original_proposal)
+    serialized_after = json.dumps(original_proposal, sort_keys=True)
+
+    # Assert original proposal was not modified in-place
+    assert serialized_before == serialized_after
+    assert "confidence" not in sanitized
+    assert "confidence" in original_proposal
+
+
+def test_constitution_sanitizer_idempotence():
+    proposal = {
+        "confidence": 0.99,
+        "question": {
+            "id": "q_idempotent",
+            "hypothesis": "Testing idempotence.",
+            "internal_weights": [1, 2, 3]
+        }
+    }
+    pass1 = sanitize_proposal_for_judge(proposal)
+    pass2 = sanitize_proposal_for_judge(pass1)
+    assert pass1 == pass2
+
+
+def test_constitution_review_chamber_does_not_mutate_input_proposal(tmp_path):
+    rej_file = tmp_path / "rej.jsonl"
+    chamber = EpistemicReviewChamber(quarantine_file=rej_file)
+    original_input = {
+        "proposal_id": "prop_immutable_check",
+        "question": {
+            "id": "q_immutable_check",
+            "hypothesis": "Hypothesis about pointer velocity, controlling for dpi scaling and sensor noise.",
+            "required_signals": ["sig_test_pointer_velocity"],
+            "evaluation_trigger": {
+                "rules": [{"signal_id": "sig_test_pointer_velocity", "operator": ">", "threshold": 0.5, "window_ms": 100}]
+            },
+            "provenance": {
+                "derived_from": [],
+                "evidence_roots": ["sig_test_pointer_velocity"]
+            }
+        }
+    }
+    serialized_before = json.dumps(original_input, sort_keys=True)
+    res = chamber.review(original_input)
+    serialized_after = json.dumps(original_input, sort_keys=True)
+
+    assert serialized_before == serialized_after
+    assert res["decision"] == "ACCEPT"
+    # Enriched proposal returned has epistemic_status attached
+    assert "epistemic_status" in res["reviewed_proposal"]["question"]
+    # But original caller dictionary remains untouched
+    assert "epistemic_status" not in original_input["question"]
+
+
+def test_constitution_concurrent_jsonl_append_safety(tmp_path):
+    import concurrent.futures
+    rej_file = tmp_path / "concurrent_rej.jsonl"
+
+    def write_claim(idx: int):
+        prop = {"proposal_id": f"prop_conc_{idx}", "question": {"hypothesis": f"Hypothesis {idx}"}}
+        ruling = {"decision": "QUARANTINE", "quarantine_reason": f"REASON_{idx}", "epistemic_score": 0.5}
+        record_quarantined_claim(prop, ruling, file_path=rej_file)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        list(pool.map(write_claim, range(24)))
+
+    assert rej_file.exists()
+    lines = [line.strip() for line in rej_file.read_text(encoding="utf-8").splitlines() if line.strip()]
+    assert len(lines) == 24
+    for l in lines:
+        parsed = json.loads(l)
+        assert "proposal_id" in parsed
+        assert "decision" in parsed
+
+
+def test_constitution_transitive_acyclic_five_node_cycle():
+    verifier = EvidenceVerifier()
+    # 5-node cycle: A -> B -> C -> D -> E -> A
+    knowledge_state = {
+        "questions": [
+            {"id": "q_b", "provenance": {"derived_from": ["q_c"]}},
+            {"id": "q_c", "provenance": {"derived_from": ["q_d"]}},
+            {"id": "q_d", "provenance": {"derived_from": ["q_e"]}},
+            {"id": "q_e", "provenance": {"derived_from": ["q_a"]}},
+        ]
+    }
+    proposal = {
+        "question": {
+            "id": "q_a",
+            "required_signals": ["sig_s1"],
+            "provenance": {
+                "derived_from": ["q_b"],
+                "evidence_roots": ["sig_s1"]
+            }
+        }
+    }
+    res = verifier.verify_provenance(proposal, knowledge_state)
+    assert res["circularity_detected"] is True
+    assert res["passes_verification"] is False

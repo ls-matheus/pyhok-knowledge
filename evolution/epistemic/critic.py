@@ -7,9 +7,12 @@ from typing import Any
 FORBIDDEN_DIAGNOSTIC_TERMS = [
     "diagnose",
     "diagnosis",
+    "diagnoses",
     "confirms syndrome",
     "clinical diagnosis",
     "confirmed disorder",
+    "confirms disorder",
+    "is proof of disorder",
     "has autism",
     "has adhd",
     "cures",
@@ -18,8 +21,12 @@ FORBIDDEN_DIAGNOSTIC_TERMS = [
 
 CAUSAL_OVERREACH_TERMS = [
     "definitively proves",
+    "definitely proves",
+    "proves conclusively",
     "guarantees that",
+    "guarantees",
     "invariably causes",
+    "always causes",
     "indisputable cause",
     "absolute proof",
 ]

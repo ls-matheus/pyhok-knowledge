@@ -44,10 +44,22 @@ ALL_KNOWN_CONFOUNDERS = {
     "session_fatigue": "behavioral",
 }
 
+MITIGATION_PREFIXES = [
+    "controlling for",
+    "controlled for",
+    "excluding",
+    "adjusted for",
+    "mitigating",
+    "filtered for",
+    "normalized for",
+    "robust to",
+    "accounting for",
+]
+
 
 class AlternativeExplanationAgent:
     """
-    Red-Team / Alternative Explanation Agent (v2):
+    Red-Team / Alternative Explanation Agent (v2.2):
     Role: Challenges the proposal by seeking non-causal explanations, unmodeled confounders, measurement artifacts, and Occam's razor violations.
     """
 
@@ -111,8 +123,8 @@ class AlternativeExplanationAgent:
         # 2. Check Mitigation Status
         for c in confounders_identified:
             c_clean = c.replace("_", " ")
-            # If the hypothesis text or rules explicitly address / control for this confounder
-            if f"controlling for {c_clean}" in hypo_lower or f"excluding {c_clean}" in hypo_lower or f"adjusted for {c_clean}" in hypo_lower:
+            is_mitigated = any(f"{prefix} {c_clean}" in hypo_lower for prefix in MITIGATION_PREFIXES)
+            if is_mitigated:
                 mitigated_confounders.append(c)
             else:
                 unmitigated_confounders.append(c)
@@ -124,7 +136,6 @@ class AlternativeExplanationAgent:
             )
 
         # 3. Principled Occam's Razor / Complexity Evaluation
-        # Complexity is evaluated relative to the explanatory scope:
         num_rules = len(rules)
         num_signals = max(1, len(req_signals))
         ratio = num_rules / num_signals
@@ -136,7 +147,6 @@ class AlternativeExplanationAgent:
         elif num_rules <= 3:
             parsimony_score = 0.90
         elif num_rules <= 6:
-            # If multi-signal, ratio is low (justified complexity)
             if ratio <= 2.0:
                 parsimony_score = 0.75
             else:
@@ -145,7 +155,6 @@ class AlternativeExplanationAgent:
                     f"Overcomplicated rule structure ({num_rules} rules on {num_signals} signals); simpler threshold likely suffices."
                 )
         else:
-            # Severe Occam's razor penalty for > 6 rules
             parsimony_score = max(0.10, round(1.0 - (num_rules * 0.08), 4))
             alternative_hypotheses.append(
                 f"Severe Occam's razor violation ({num_rules} rules). High risk of post-hoc overfitting."
