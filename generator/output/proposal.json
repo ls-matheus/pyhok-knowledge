@@ -1,30 +1,30 @@
 {
   "status": "PROPOSAL_READY",
   "proposal": {
-    "proposal_id": "prop_thesis_gap_0827e9ae",
+    "proposal_id": "prop_thesis_gap_533fffea",
     "operation": "OPEN_THESIS_CREATE",
-    "opportunity_id": "opp_gap_sig_stream_1_2f0867",
-    "domain": "domain_1",
+    "opportunity_id": "opp_gap_sig_stream_0_9ea3e3",
+    "domain": "domain_0",
     "thesis": {
-      "thesis_id": "thesis_gap_0827e9ae",
-      "cycle_id": "cycle_20260827_050518_099842_b3c4fe",
+      "thesis_id": "thesis_gap_533fffea",
+      "cycle_id": "cycle_20260827_050612_910371_3ed80c",
       "opportunity_type": "GAP",
-      "opportunity_id": "opp_gap_sig_stream_1_2f0867",
-      "target_domain": "domain_1",
-      "description": "Observational gap: Signal sig_stream_1 in domain domain_1 has zero investigational theses.",
-      "hypothesis_template": "Signal drift and baseline stability characteristics for sig_stream_1.",
+      "opportunity_id": "opp_gap_sig_stream_0_9ea3e3",
+      "target_domain": "domain_0",
+      "description": "Observational gap: Signal sig_stream_0 in domain domain_0 has zero investigational theses.",
+      "hypothesis_template": "Response threshold and operational latency bounds for signal sig_stream_0.",
       "investigation_status": "OPEN",
       "open_variables": [
         {
-          "id": "var_sig_stream_1_predictor",
-          "variable_id": "var_sig_stream_1_predictor",
-          "name": "Predictor for sig_stream_1",
+          "id": "var_sig_stream_0_predictor",
+          "variable_id": "var_sig_stream_0_predictor",
+          "name": "Predictor for sig_stream_0",
           "role": "predictor",
           "type": "signal",
-          "domain": "domain_1",
+          "domain": "domain_0",
           "status": "UNBOUND",
           "candidate_values": [
-            "sig_stream_1"
+            "sig_stream_0"
           ],
           "value": null,
           "binding": null,
@@ -36,7 +36,7 @@
           "name": "Observed Functional Outcome",
           "role": "outcome",
           "type": "metric",
-          "domain": "domain_1",
+          "domain": "domain_0",
           "status": "UNBOUND",
           "candidate_values": [],
           "value": null,
@@ -46,30 +46,30 @@
       ],
       "relational_hypotheses": [
         {
-          "source_var": "var_sig_stream_1_predictor",
+          "source_var": "var_sig_stream_0_predictor",
           "target_var": "var_functional_outcome",
           "relation_type": "HYPOTHESIZED_LINK",
-          "description": "Exploring if sig_stream_1 modulates functional outcome."
+          "description": "Exploring if sig_stream_0 modulates functional outcome."
         }
       ],
       "synapse_binding": {
         "status": "BOUND_FOR_EVALUATION",
         "bound_variables": [
           {
-            "id": "var_sig_stream_1_predictor",
-            "variable_id": "var_sig_stream_1_predictor",
-            "name": "Predictor for sig_stream_1",
+            "id": "var_sig_stream_0_predictor",
+            "variable_id": "var_sig_stream_0_predictor",
+            "name": "Predictor for sig_stream_0",
             "role": "predictor",
             "type": "signal",
-            "domain": "domain_1",
+            "domain": "domain_0",
             "status": "BOUND",
             "candidate_values": [
-              "sig_stream_1"
+              "sig_stream_0"
             ],
-            "value": "sig_stream_1",
-            "binding": "sig_stream_1",
+            "value": "sig_stream_0",
+            "binding": "sig_stream_0",
             "binding_source": "SYNAPSE",
-            "bound_at": "2026-08-27T05:05:20.620322+00:00"
+            "bound_at": "2026-08-27T05:06:13.992622+00:00"
           },
           {
             "id": "var_functional_outcome",
@@ -77,13 +77,13 @@
             "name": "Observed Functional Outcome",
             "role": "outcome",
             "type": "metric",
-            "domain": "domain_1",
+            "domain": "domain_0",
             "status": "BOUND",
             "candidate_values": [],
-            "value": "sig_stream_1",
-            "binding": "sig_stream_1",
+            "value": "sig_stream_0",
+            "binding": "sig_stream_0",
             "binding_source": "SYNAPSE",
-            "bound_at": "2026-08-27T05:05:20.620330+00:00"
+            "bound_at": "2026-08-27T05:06:13.992626+00:00"
           }
         ],
         "unbound_variables": []
@@ -91,7 +91,7 @@
       "review_result": {
         "decision": "REJECT",
         "epistemic_score": 0.8,
-        "quarantine_reason": "REPEATS_PRIOR_REJECTED_CLAIM: Proposal matches prior rejection 'prop_unknown' via EXACT_MATCH (similarity=1.00, prior_reason='CRITIC_SEVERITY_TOO_HIGH (0.6)')",
+        "quarantine_reason": "REPEATS_PRIOR_REJECTED_CLAIM: Proposal matches prior rejection 'prop_unknown' via TOKEN_PARAPHRASE (similarity=0.75, prior_reason='CRITIC_SEVERITY_TOO_HIGH (0.6)')",
         "assigned_epistemic_status": "SPECULATION",
         "critic": {
           "critic_role": "ADVERSARIAL_CRITIC",
@@ -111,7 +111,7 @@
           "verdict": "VERIFIED",
           "derivation_depth": 0,
           "evidence_roots": [
-            "sig_stream_1"
+            "sig_stream_0"
           ],
           "independent_evidence_count": 1,
           "pre_existing_evidence": true,
@@ -137,9 +137,9 @@
         }
       },
       "decision": "REJECT",
-      "rejection_reason": "REPEATS_PRIOR_REJECTED_CLAIM: Proposal matches prior rejection 'prop_unknown' via EXACT_MATCH (similarity=1.00, prior_reason='CRITIC_SEVERITY_TOO_HIGH (0.6)')",
+      "rejection_reason": "REPEATS_PRIOR_REJECTED_CLAIM: Proposal matches prior rejection 'prop_unknown' via TOKEN_PARAPHRASE (similarity=0.75, prior_reason='CRITIC_SEVERITY_TOO_HIGH (0.6)')",
       "epistemic_status": "SPECULATION",
-      "timestamp": "2026-08-27T05:05:20.621494+00:00"
+      "timestamp": "2026-08-27T05:06:13.993395+00:00"
     },
     "confidence": 0.8
   }
