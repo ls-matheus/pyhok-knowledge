@@ -1,13 +1,13 @@
 {
   "status": "PROPOSAL_READY",
   "proposal": {
-    "proposal_id": "prop_thesis_gap_07246a53",
+    "proposal_id": "prop_thesis_gap_3f930e48",
     "operation": "OPEN_THESIS_CREATE",
     "opportunity_id": "opp_gap_sig_stream_1_2f0867",
     "domain": "domain_1",
     "thesis": {
-      "thesis_id": "thesis_gap_07246a53",
-      "cycle_id": "cycle_20260827_045522_555560_34a1dd",
+      "thesis_id": "thesis_gap_3f930e48",
+      "cycle_id": "cycle_20260827_045631_540719_6470a5",
       "opportunity_type": "GAP",
       "opportunity_id": "opp_gap_sig_stream_1_2f0867",
       "target_domain": "domain_1",
@@ -69,7 +69,7 @@
             "value": "sig_stream_1",
             "binding": "sig_stream_1",
             "binding_source": "SYNAPSE",
-            "bound_at": "2026-08-27T04:55:24.166028+00:00"
+            "bound_at": "2026-08-27T04:56:33.055023+00:00"
           },
           {
             "id": "var_functional_outcome",
@@ -83,7 +83,7 @@
             "value": "sig_stream_1",
             "binding": "sig_stream_1",
             "binding_source": "SYNAPSE",
-            "bound_at": "2026-08-27T04:55:24.166035+00:00"
+            "bound_at": "2026-08-27T04:56:33.055028+00:00"
           }
         ],
         "unbound_variables": []
@@ -139,7 +139,7 @@
       "decision": "REJECT",
       "rejection_reason": "REPEATS_PRIOR_REJECTED_CLAIM: Proposal matches prior rejection 'prop_unknown' via TOKEN_PARAPHRASE (similarity=0.75, prior_reason='CRITIC_SEVERITY_TOO_HIGH (0.6)')",
       "epistemic_status": "SPECULATION",
-      "timestamp": "2026-08-27T04:55:24.167050+00:00"
+      "timestamp": "2026-08-27T04:56:33.055988+00:00"
     },
     "confidence": 0.8
   }
