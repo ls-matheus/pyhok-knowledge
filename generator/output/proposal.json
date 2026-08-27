@@ -1,13 +1,13 @@
 {
   "status": "PROPOSAL_READY",
   "proposal": {
-    "proposal_id": "prop_thesis_gap_a9020adf",
+    "proposal_id": "prop_thesis_gap_a91c07d1",
     "operation": "OPEN_THESIS_CREATE",
     "opportunity_id": "opp_gap_sig_stream_0_9ea3e3",
     "domain": "domain_0",
     "thesis": {
-      "thesis_id": "thesis_gap_a9020adf",
-      "cycle_id": "cycle_20260827_044541_204679_a1a1cc",
+      "thesis_id": "thesis_gap_a91c07d1",
+      "cycle_id": "cycle_20260827_044648_728492_eaa737",
       "opportunity_type": "GAP",
       "opportunity_id": "opp_gap_sig_stream_0_9ea3e3",
       "target_domain": "domain_0",
@@ -69,7 +69,7 @@
             "value": "sig_stream_0",
             "binding": "sig_stream_0",
             "binding_source": "SYNAPSE",
-            "bound_at": "2026-08-27T04:45:42.256375+00:00"
+            "bound_at": "2026-08-27T04:46:50.578039+00:00"
           },
           {
             "id": "var_functional_outcome",
@@ -83,7 +83,7 @@
             "value": "sig_stream_0",
             "binding": "sig_stream_0",
             "binding_source": "SYNAPSE",
-            "bound_at": "2026-08-27T04:45:42.256381+00:00"
+            "bound_at": "2026-08-27T04:46:50.578046+00:00"
           }
         ],
         "unbound_variables": []
@@ -91,7 +91,7 @@
       "review_result": {
         "decision": "REJECT",
         "epistemic_score": 0.8,
-        "quarantine_reason": "REPEATS_PRIOR_REJECTED_CLAIM: Proposal matches prior rejection 'prop_unknown' via EXACT_MATCH (similarity=1.00, prior_reason='CRITIC_SEVERITY_TOO_HIGH (0.6)')",
+        "quarantine_reason": "REPEATS_PRIOR_REJECTED_CLAIM: Proposal matches prior rejection 'prop_unknown' via TOKEN_PARAPHRASE (similarity=0.75, prior_reason='CRITIC_SEVERITY_TOO_HIGH (0.6)')",
         "assigned_epistemic_status": "SPECULATION",
         "critic": {
           "critic_role": "ADVERSARIAL_CRITIC",
@@ -137,9 +137,9 @@
         }
       },
       "decision": "REJECT",
-      "rejection_reason": "REPEATS_PRIOR_REJECTED_CLAIM: Proposal matches prior rejection 'prop_unknown' via EXACT_MATCH (similarity=1.00, prior_reason='CRITIC_SEVERITY_TOO_HIGH (0.6)')",
+      "rejection_reason": "REPEATS_PRIOR_REJECTED_CLAIM: Proposal matches prior rejection 'prop_unknown' via TOKEN_PARAPHRASE (similarity=0.75, prior_reason='CRITIC_SEVERITY_TOO_HIGH (0.6)')",
       "epistemic_status": "SPECULATION",
-      "timestamp": "2026-08-27T04:45:42.257322+00:00"
+      "timestamp": "2026-08-27T04:46:50.579311+00:00"
     },
     "confidence": 0.8
   }
