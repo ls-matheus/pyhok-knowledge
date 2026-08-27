@@ -63,11 +63,9 @@ class EpistemicDiscoveryEngine:
         opportunities: list[dict[str, Any]] = []
 
         # 1. Strategy A: Gaps
-        gap_signals = graph.find_signals_without_theses() if hasattr(graph, "find_signals_without_theses") else graph.find_unconnected_signals()
-        if not gap_signals:
-            gap_signals = graph.find_unconnected_signals()
+        unconnected = graph.find_unconnected_signals()
         signals_map = {s.get('id'): s for s in state.get('signals', []) if isinstance(s, dict) and s.get('id')}
-        for sig_id in gap_signals:
+        for sig_id in unconnected:
             sig_data = signals_map.get(sig_id, {})
             domain = sig_data.get('domain', 'general')
             opp_id = f'opp_gap_{sig_id}_{hashlib.sha256(sig_id.encode()).hexdigest()[:6]}'
@@ -83,6 +81,24 @@ class EpistemicDiscoveryEngine:
                 'contradiction_value': 0.0,
                 'binding_potential': 0.95,
             })
+
+        if not unconnected and hasattr(graph, "find_signals_without_theses"):
+            for sig_id in graph.find_signals_without_theses():
+                sig_data = signals_map.get(sig_id, {})
+                domain = sig_data.get('domain', 'general')
+                opp_id = f'opp_sig_{sig_id}_{hashlib.sha256(sig_id.encode()).hexdigest()[:6]}'
+                opportunities.append({
+                    'opportunity_id': opp_id,
+                    'opportunity_type': 'GAP',
+                    'target_domain': domain,
+                    'source_entities': [sig_id],
+                    'description': f'Observational gap: Signal {sig_id} in domain {domain} has zero investigational theses.',
+                    'evidence_gap_score': 0.85,
+                    'novelty_score': 0.85,
+                    'coverage_gain': 0.80,
+                    'contradiction_value': 0.0,
+                    'binding_potential': 0.90,
+                })
 
         # 2. Strategy B: Incomplete Theses
         incomplete = graph.find_incomplete_theses()

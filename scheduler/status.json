@@ -30,8 +30,8 @@
     "total_runs": 0,
     "successful_runs": 0,
     "failed_runs": 0,
-    "skipped_runs": 5,
-    "blocked_runs": 8,
+    "skipped_runs": 11,
+    "blocked_runs": 14,
     "circuit_breaker_trips": 0
   }
 }
