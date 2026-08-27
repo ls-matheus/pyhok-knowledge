@@ -1,0 +1,16 @@
+# Ephemeral caches
+*.tmp
+*.py[cod]
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+.DS_Store
+.idea/
+.vscode/
+generator/input/agent_context.json
+
+# Ledger and evaluations streams (kept as runtime ledgers or committed per cycle)
+evolution/post_evaluations.jsonl
+evolution/manifests/
+

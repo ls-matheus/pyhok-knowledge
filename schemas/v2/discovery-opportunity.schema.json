@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pyhok.org/schemas/v2/discovery-opportunity.schema.json",
+  "title": "DiscoveryOpportunityEntity",
+  "description": "Represents an epistemically detected knowledge gap, unexplored relation, contradiction, or incomplete thesis candidate.",
+  "type": "object",
+  "required": [
+    "opportunity_id",
+    "opportunity_type",
+    "target_domain",
+    "source_entities",
+    "novelty_score",
+    "information_gain_score",
+    "exploration_priority",
+    "created_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "opportunity_id": {
+      "type": "string",
+      "pattern": "^opp_[a-z0-9_]+$"
+    },
+    "opportunity_type": {
+      "type": "string",
+      "enum": [
+        "GAP",
+        "UNEXPLORED_RELATION",
+        "CONTRADICTION",
+        "INCOMPLETE_THESIS",
+        "CROSS_DOMAIN_COMBINATION"
+      ]
+    },
+    "target_domain": {
+      "type": "string"
+    },
+    "source_entities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10
+    },
+    "novelty_score": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "information_gain_score": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "evidence_gap_score": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "contradiction_value": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "coverage_gain": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "binding_potential": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "exploration_priority": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "contradiction_id": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

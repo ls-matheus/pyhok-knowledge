@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PyHokDatasetRelease",
+  "type": "object",
+  "required": [
+    "dataset_version",
+    "created_at",
+    "checksum_sha256",
+    "signals",
+    "questions",
+    "relations"
+  ],
+  "properties": {
+    "dataset_version": {
+      "type": "string",
+      "pattern": "^\\d{4}\\.\\d{2}\\.\\d{2}\\.\\d+$"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "checksum_sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$"
+    },
+    "signals": {
+      "type": "array",
+      "items": {
+        "$ref": "signal.schema.json"
+      }
+    },
+    "questions": {
+      "type": "array",
+      "items": {
+        "$ref": "question.schema.json"
+      }
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "$ref": "relation.schema.json"
+      }
+    }
+  },
+  "additionalProperties": false
+}

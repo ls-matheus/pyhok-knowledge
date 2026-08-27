@@ -1,0 +1,47 @@
+name: PyHok Knowledge PR Validator
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  validate:
+    if: startsWith(github.head_ref, 'agent/evolution-')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install google-genai jsonschema pytest
+
+      - name: Run Full Quality Gate
+        run: |
+          python scheduler/quality_gate.py
+
+      - name: Merge approved PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr merge \
+            "${{ github.event.pull_request.number }}" \
+            --squash \
+            --delete-branch

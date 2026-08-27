@@ -1,0 +1,332 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pyhok.org/schema/v2/question.schema.json",
+  "title": "PyHokQuestionEntity",
+  "description": "Extensible observational hypothesis evaluated by the Sinapse engine.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "hypothesis",
+    "required_signals",
+    "evaluation_trigger",
+    "evaluation_model",
+    "evidence_model",
+    "cortex_weights"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^q_[a-z0-9_]+$"
+    },
+    "hypothesis": {
+      "type": "string",
+      "minLength": 1
+    },
+    "required_signals": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^sig_[a-z0-9_]+$"
+      }
+    },
+    "evaluation_trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "logical_operator",
+        "rules"
+      ],
+      "properties": {
+        "logical_operator": {
+          "type": "string",
+          "enum": [
+            "AND",
+            "OR"
+          ]
+        },
+        "rules": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "signal_id",
+              "operator",
+              "threshold",
+              "window_ms"
+            ],
+            "properties": {
+              "signal_id": {
+                "type": "string",
+                "pattern": "^sig_[a-z0-9_]+$"
+              },
+              "operator": {
+                "type": "string",
+                "enum": [
+                  ">",
+                  "<",
+                  ">=",
+                  "<=",
+                  "==",
+                  "!="
+                ]
+              },
+              "threshold": {
+                "type": "number"
+              },
+              "window_ms": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "evidence_model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "base_strength",
+        "decay_rate_per_sec"
+      ],
+      "properties": {
+        "base_strength": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "decay_rate_per_sec": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0
+        }
+      }
+    },
+    "cortex_weights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "focus",
+        "stress",
+        "autonomy",
+        "fatigue"
+      ],
+      "properties": {
+        "focus": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "stress": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "autonomy": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "fatigue": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        }
+      }
+    },
+    "evaluation_model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method_id",
+        "version",
+        "parameters"
+      ],
+      "properties": {
+        "method_id": {
+          "type": "string",
+          "pattern": "^method_[a-z0-9_]+$"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "parameters": {
+          "type": "object"
+        }
+      }
+    },
+    "epistemic_status": {
+      "type": "string",
+      "enum": [
+        "EXTERNAL_FACT",
+        "OBSERVATION",
+        "DERIVED",
+        "HYPOTHESIS",
+        "SPECULATION"
+      ]
+    },
+    "investigation_status": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "PARTIALLY_BOUND",
+        "BOUND",
+        "UNDER_TEST",
+        "SUPPORTED",
+        "WEAKENED",
+        "REJECTED",
+        "QUARANTINED",
+        "SUPERSEDED"
+      ]
+    },
+    "open_variables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "role",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "predictor",
+              "outcome",
+              "confounder",
+              "moderator",
+              "condition",
+              "unspecified"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "signal",
+              "metric",
+              "state",
+              "context",
+              "unspecified"
+            ]
+          },
+          "domain": {
+            "type": "string"
+          },
+          "constraints": {
+            "type": "object"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "UNBOUND",
+              "BOUND"
+            ]
+          },
+          "binding": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "binding_source": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "SYNAPSE",
+              "EVIDENCE",
+              null
+            ]
+          },
+          "bound_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "epistemic_status",
+        "derived_from",
+        "evidence_roots",
+        "derivation_depth",
+        "independent_evidence_count"
+      ],
+      "properties": {
+        "epistemic_status": {
+          "type": "string",
+          "enum": [
+            "EXTERNAL_FACT",
+            "OBSERVATION",
+            "DERIVED",
+            "HYPOTHESIS",
+            "SPECULATION"
+          ]
+        },
+        "derived_from": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^q_[a-z0-9_]+$"
+          }
+        },
+        "evidence_roots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(sig|ext)_[a-z0-9_]+$"
+          }
+        },
+        "derivation_depth": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "independent_evidence_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "generator_model": {
+          "type": "string"
+        },
+        "cycle_id": {
+          "type": "string"
+        },
+        "judge_ruling": {
+          "type": "object"
+        },
+        "variable_bindings": {
+          "type": "object"
+        },
+        "binding_source": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "SYNAPSE",
+            "EVIDENCE",
+            null
+          ]
+        }
+      }
+    }
+  }
+}

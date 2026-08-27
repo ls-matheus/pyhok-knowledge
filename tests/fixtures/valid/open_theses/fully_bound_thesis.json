@@ -1,0 +1,28 @@
+{
+  "thesis_id": "thesis_pointer_velocity_fully_bound",
+  "hypothesis_template": "Pointer velocity instability directly correlates with latency variance.",
+  "investigation_status": "BOUND",
+  "open_variables": [
+    {
+      "id": "var_pointer",
+      "role": "predictor",
+      "type": "signal",
+      "domain": "motor_control",
+      "status": "BOUND",
+      "binding": "sig_test_pointer_velocity",
+      "binding_source": "SYNAPSE",
+      "bound_at": "2026-08-27T00:00:00Z"
+    }
+  ],
+  "relational_hypotheses": [
+    {
+      "source_var": "var_pointer",
+      "target_var": "var_pointer",
+      "relation_type": "CORRELATED"
+    }
+  ],
+  "required_signals": [
+    "sig_test_pointer_velocity"
+  ],
+  "resolution": "BOUND_FOR_EVALUATION"
+}

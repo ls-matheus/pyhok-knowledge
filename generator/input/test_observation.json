@@ -1,0 +1,7 @@
+{
+  "observation_id": "obs_test_001",
+  "description": "Interação simulada em que um sinal de movimento apresenta alteração persistente em relação ao comportamento observado anteriormente.",
+  "available_signals": [
+    "sig_test_pointer_velocity"
+  ]
+}

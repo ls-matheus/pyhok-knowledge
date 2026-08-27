@@ -1,0 +1,25 @@
+{
+  "id": "sig_pointer_variance_2s",
+  "kind": "TEMPORAL_FEATURE",
+  "source": "pointer",
+  "data_type": "scalar",
+  "unit": "variance_index",
+  "temporal_window_ms": 2000,
+  "dependencies": [
+    "sig_pointer_velocity"
+  ],
+  "feature_method_id": "method_rolling_variance",
+  "quality": {
+    "metric_id": "self_quality",
+    "minimum_acceptable": 0.9,
+    "missing_is_zero": false
+  },
+  "privacy": {
+    "classification": "ANONYMOUS_METRIC",
+    "local_only": true,
+    "retention": "SESSION"
+  },
+  "metadata": {
+    "test_fixture": true
+  }
+}

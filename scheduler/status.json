@@ -1,0 +1,37 @@
+{
+  "status": "CIRCUIT_OPEN",
+  "current_cycle_id": null,
+  "last_run": "2026-08-26T22:54:13.283854-03:00",
+  "last_success": null,
+  "last_failure": "2026-08-26T22:54:13.755526-03:00",
+  "last_error": "run_audit failed: GEMINI_API_KEY is missing.\n",
+  "last_stop_reason": "PREFLIGHT_BLOCKED: dirty_workspace_unknown_files: .github/workflows/continuous-discovery.yml, scheduler/continuous_engine.py",
+  "processed_proposals": [],
+  "last_opportunity_id": null,
+  "last_proposal_id": null,
+  "last_question_id": null,
+  "last_branch": null,
+  "last_pr_url": null,
+  "consecutive_failures": 3,
+  "circuit_breaker": {
+    "is_open": true,
+    "max_consecutive_failures": 3,
+    "tripped_at": "2026-08-26T22:54:13.755526-03:00",
+    "trip_reason": "3 consecutive failures: run_audit failed: GEMINI_API_KEY is missing.\n"
+  },
+  "audit_trail": {
+    "main_before_sha": null,
+    "proposal_commit_sha": null,
+    "merge_commit_sha": null,
+    "state_before_hash": null,
+    "state_after_hash": null
+  },
+  "stats": {
+    "total_runs": 3,
+    "successful_runs": 0,
+    "failed_runs": 3,
+    "skipped_runs": 11,
+    "blocked_runs": 19,
+    "circuit_breaker_trips": 1
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "catalog_version": "1.0.0",
+  "methods": [
+    {
+      "method_id": "method_threshold",
+      "version": "1.0.0",
+      "status": "SUPPORTED",
+      "description": "Avaliação baseada em comparação com limiar.",
+      "engine_contract": {
+        "component": "sinapse.evidence_engine"
+      }
+    },
+    {
+      "method_id": "method_baseline_deviation",
+      "version": "1.0.0",
+      "status": "SUPPORTED",
+      "description": "Avaliação baseada em desvio relativo a uma linha de base.",
+      "engine_contract": {
+        "component": "sinapse.evidence_engine"
+      }
+    },
+    {
+      "method_id": "method_persistence",
+      "version": "1.0.0",
+      "status": "SUPPORTED",
+      "description": "Avaliação baseada na persistência temporal de um padrão.",
+      "engine_contract": {
+        "component": "sinapse.evidence_engine"
+      }
+    }
+  ]
+}

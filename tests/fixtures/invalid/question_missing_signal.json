@@ -1,0 +1,28 @@
+{
+  "id": "q_invalid_missing_signal",
+  "hypothesis": "Pergunta inválida para teste.",
+  "required_signals": [
+    "sig_that_does_not_exist"
+  ],
+  "evaluation_trigger": {
+    "logical_operator": "AND",
+    "rules": [
+      {
+        "signal_id": "sig_that_does_not_exist",
+        "operator": ">",
+        "threshold": 0.5,
+        "window_ms": 1000
+      }
+    ]
+  },
+  "evidence_impact": {
+    "base_strength": 0.5,
+    "decay_rate_per_sec": 0.1
+  },
+  "cortex_weights": {
+    "focus": 0,
+    "stress": 0,
+    "autonomy": 0,
+    "fatigue": 0
+  }
+}

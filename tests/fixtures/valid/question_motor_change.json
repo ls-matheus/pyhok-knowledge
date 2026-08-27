@@ -1,0 +1,28 @@
+{
+  "id": "q_test_motor_change",
+  "hypothesis": "O padrão motor apresentou uma alteração significativa em relação à linha de base.",
+  "required_signals": [
+    "sig_test_pointer_velocity"
+  ],
+  "evaluation_trigger": {
+    "logical_operator": "AND",
+    "rules": [
+      {
+        "signal_id": "sig_test_pointer_velocity",
+        "operator": ">",
+        "threshold": 0.7,
+        "window_ms": 1500
+      }
+    ]
+  },
+  "evidence_impact": {
+    "base_strength": 0.6,
+    "decay_rate_per_sec": 0.1
+  },
+  "cortex_weights": {
+    "focus": -0.2,
+    "stress": 0.4,
+    "autonomy": -0.1,
+    "fatigue": 0.1
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "id": "sig_pointer_velocity",
+  "kind": "RAW",
+  "source": "pointer",
+  "data_type": "scalar",
+  "unit": "pixels_per_second",
+  "temporal_window_ms": 0,
+  "quality": {
+    "metric_id": "self_quality",
+    "minimum_acceptable": 0.9,
+    "missing_is_zero": false
+  },
+  "privacy": {
+    "classification": "ANONYMOUS_METRIC",
+    "local_only": true,
+    "retention": "SESSION"
+  },
+  "metadata": {
+    "test_fixture": true
+  }
+}

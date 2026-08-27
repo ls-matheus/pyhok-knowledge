@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pyhok.org/schema/v1/signal.schema.json",
+  "title": "PyHokSignalDefinition",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "source",
+    "type",
+    "unit",
+    "normalized",
+    "min_quality_threshold"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^sig_[a-z0-9_]+$"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "pointer",
+        "keyboard",
+        "camera_gaze",
+        "camera_face",
+        "microphone",
+        "system"
+      ]
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "scalar",
+        "vector2d",
+        "event_stream"
+      ]
+    },
+    "unit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "normalized": {
+      "type": "boolean"
+    },
+    "min_quality_threshold": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    }
+  }
+}

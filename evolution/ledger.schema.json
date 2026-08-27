@@ -1,0 +1,152 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PyHok Evolution Ledger Event Schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "cycle_id",
+    "timestamp",
+    "previous_event_hash",
+    "initial_state_hash",
+    "proposal_hash",
+    "resulting_state_hash",
+    "proposal_id",
+    "predictions",
+    "gate_verdict",
+    "action_taken",
+    "post_evaluation"
+  ],
+  "properties": {
+    "cycle_id": {
+      "type": "string",
+      "pattern": "^cycle_[a-zA-Z0-9_]+$"
+    },
+    "timestamp": {
+      "type": "string"
+    },
+    "previous_event_hash": {
+      "type": ["string", "null"],
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "initial_state_hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "proposal_hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "resulting_state_hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "proposal_id": {
+      "type": "string",
+      "pattern": "^prop_[a-zA-Z0-9_]+$"
+    },
+    "predictions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["novelty_score", "coverage_gain", "confidence"],
+      "properties": {
+        "novelty_score": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "coverage_gain": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0
+        }
+      }
+    },
+    "gate_verdict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["valid", "safe", "classification"],
+      "properties": {
+        "valid": {
+          "type": "boolean"
+        },
+        "safe": {
+          "type": "boolean"
+        },
+        "classification": {
+          "type": "string",
+          "enum": [
+            "PREDICTED_IMPROVEMENT",
+            "PREDICTED_NEUTRAL",
+            "PREDICTED_REGRESSION",
+            "REJECTED_SAFETY",
+            "REJECTED_VALIDITY"
+          ]
+        }
+      }
+    },
+    "action_taken": {
+      "type": "string",
+      "enum": [
+        "SHADOW_RECORDED",
+        "MERGED",
+        "REJECTED",
+        "SKIPPED"
+      ]
+    },
+    "post_evaluation": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": [
+        "observed",
+        "actually_improved",
+        "evaluation_timestamp"
+      ],
+      "properties": {
+        "observed": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "novelty",
+            "coverage_gain",
+            "redundancy",
+            "regression"
+          ],
+          "properties": {
+            "novelty": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0
+            },
+            "coverage_gain": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0
+            },
+            "redundancy": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0
+            },
+            "regression": {
+              "type": "boolean"
+            },
+            "regression_type": {
+              "type": ["string", "null"]
+            }
+          }
+        },
+        "actually_improved": {
+          "type": "boolean"
+        },
+        "evaluation_timestamp": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

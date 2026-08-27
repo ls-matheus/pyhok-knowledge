@@ -1,0 +1,52 @@
+{
+  "mission_id": "pyhok_core_mission",
+  "mission_version": "1.0.0",
+  "status": "ACTIVE",
+
+  "objective": "Construir e refinar uma rede de hipóteses observacionais capaz de representar padrões relacionados à atenção, dinâmica motora, carga sensorial, fadiga, estresse, autonomia e comunicação, de forma complementar, temporal e individualmente variável, para posterior avaliação determinística pela Sinapse.",
+
+  "scope": {
+    "knowledge_repository": true,
+    "runtime_execution": false,
+    "user_telemetry": false,
+    "diagnosis": false
+  },
+
+  "domains": [
+    "attention_disruption",
+    "motor_instability",
+    "sensory_overload",
+    "fatigue",
+    "stress",
+    "autonomy",
+    "communication_hesitation",
+    "temporal_dynamics",
+    "cross_modal_interaction",
+    "recovery_dynamics"
+  ],
+
+  "principles": [
+    "individual_variability",
+    "non_diagnostic_single_signal",
+    "multi_evidence_reasoning",
+    "complementary_hypotheses",
+    "contradiction_detection",
+    "temporal_reasoning",
+    "cross_modal_reasoning",
+    "uncertainty_preservation",
+    "method_separation",
+    "observation_separation",
+    "novelty_over_redundancy",
+    "graph_coherence"
+  ],
+
+  "forbidden_inferences": [
+    "single_signal_diagnosis",
+    "clinical_diagnosis",
+    "syndrome_confirmation_from_single_hypothesis",
+    "causal_claim_without_defined_evidence",
+    "unsupported_sensor_behavior",
+    "unsupported_evaluation_method",
+    "runtime_capability_creation"
+  ]
+}

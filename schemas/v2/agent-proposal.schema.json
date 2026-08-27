@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pyhok.org/schema/v2/agent-proposal.schema.json",
+  "title": "PyHokAgentProposal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "proposal_id",
+    "proposal_type",
+    "created_at",
+    "source_observation",
+    "payload"
+  ],
+  "properties": {
+    "proposal_id": {
+      "type": "string",
+      "pattern": "^proposal_[a-z0-9_]+$"
+    },
+    "proposal_type": {
+      "type": "string",
+      "enum": [
+        "OPEN_THESIS_CREATE",
+        "QUESTION_CREATE",
+        "QUESTION_UPDATE",
+        "RELATION_CREATE",
+        "SIGNAL_REQUEST"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source_observation": {
+      "type": "string",
+      "minLength": 1
+    },
+    "payload": {
+      "type": "object"
+    }
+  }
+}

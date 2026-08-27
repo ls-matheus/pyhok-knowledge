@@ -1,0 +1,121 @@
+{
+  "thesis_id": "thesis_gap_e002bef3",
+  "cycle_id": "cycle_20260827_015435_857611_ff2e4b",
+  "opportunity_type": "GAP",
+  "opportunity_id": "opp_gap_sig_stream_2_a27c16",
+  "target_domain": "domain_2",
+  "description": "Observational gap: Signal sig_stream_2 in domain domain_2 has zero investigational theses.",
+  "hypothesis_template": "Investigation of uncharacterized observational variance in signal sig_stream_2.",
+  "investigation_status": "OPEN",
+  "open_variables": [
+    {
+      "id": "var_sig_stream_2_predictor",
+      "variable_id": "var_sig_stream_2_predictor",
+      "name": "Predictor for sig_stream_2",
+      "role": "predictor",
+      "type": "signal",
+      "domain": "domain_2",
+      "status": "UNBOUND",
+      "candidate_values": [
+        "sig_stream_2"
+      ],
+      "value": null,
+      "binding": null,
+      "binding_source": null
+    },
+    {
+      "id": "var_functional_outcome",
+      "variable_id": "var_functional_outcome",
+      "name": "Observed Functional Outcome",
+      "role": "outcome",
+      "type": "metric",
+      "domain": "domain_2",
+      "status": "UNBOUND",
+      "candidate_values": [],
+      "value": null,
+      "binding": null,
+      "binding_source": null
+    }
+  ],
+  "relational_hypotheses": [
+    {
+      "source_var": "var_sig_stream_2_predictor",
+      "target_var": "var_functional_outcome",
+      "relation_type": "HYPOTHESIZED_LINK",
+      "description": "Exploring if sig_stream_2 modulates functional outcome."
+    }
+  ],
+  "synapse_binding": {
+    "status": "BOUND_FOR_EVALUATION",
+    "bound_variables": [
+      {
+        "id": "var_sig_stream_2_predictor",
+        "variable_id": "var_sig_stream_2_predictor",
+        "name": "Predictor for sig_stream_2",
+        "role": "predictor",
+        "type": "signal",
+        "domain": "domain_2",
+        "status": "BOUND",
+        "candidate_values": [
+          "sig_stream_2"
+        ],
+        "value": "sig_stream_2",
+        "binding": "sig_stream_2",
+        "binding_source": "SYNAPSE",
+        "bound_at": "2026-08-27T01:54:36.696542+00:00"
+      },
+      {
+        "id": "var_functional_outcome",
+        "variable_id": "var_functional_outcome",
+        "name": "Observed Functional Outcome",
+        "role": "outcome",
+        "type": "metric",
+        "domain": "domain_2",
+        "status": "BOUND",
+        "candidate_values": [],
+        "value": "sig_stream_2",
+        "binding": "sig_stream_2",
+        "binding_source": "SYNAPSE",
+        "bound_at": "2026-08-27T01:54:36.696549+00:00"
+      }
+    ],
+    "unbound_variables": []
+  },
+  "review_result": {
+    "decision": "REJECT",
+    "epistemic_score": 0.0,
+    "critic": {
+      "critic_role": "ADVERSARIAL_CRITIC",
+      "verdict": "FAIL",
+      "severity_score": 0.6,
+      "logical_consistency_score": 0.8,
+      "contradiction_status_score": 1.0,
+      "adversarial_robustness_score": 0.4,
+      "challenges": [
+        "Evaluation trigger contains zero operational rules."
+      ],
+      "contradictions": [],
+      "passes_adversarial_check": false
+    },
+    "verifier": {
+      "verifier_role": "EVIDENCE_VERIFIER",
+      "verdict": "VERIFIED",
+      "derivation_depth": 0,
+      "evidence_roots": [
+        "sig_stream_2"
+      ],
+      "independent_evidence_count": 1,
+      "pre_existing_evidence": true,
+      "circularity_detected": false,
+      "evidence_strength_score": 1.0,
+      "independence_score": 1.0,
+      "provenance_integrity_score": 1.0,
+      "eligible_for_derived_status": false,
+      "errors": [],
+      "warnings": [],
+      "passes_verification": true
+    }
+  },
+  "decision": "REJECT",
+  "timestamp": "2026-08-27T01:54:36.697594+00:00"
+}

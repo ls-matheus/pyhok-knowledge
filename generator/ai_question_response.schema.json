@@ -1,0 +1,281 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "proposal"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "PROPOSAL_READY",
+        "NO_PROPOSAL"
+      ]
+    },
+    "proposal": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "proposal_id",
+        "operation",
+        "opportunity_id",
+        "domain",
+        "question",
+        "rationale",
+        "novelty_justification",
+        "computability_justification",
+        "individuality_justification",
+        "uncertainty_justification",
+        "evidence_basis",
+        "confidence"
+      ],
+      "properties": {
+        "proposal_id": {
+          "type": "string"
+        },
+        "operation": {
+          "type": "string",
+          "enum": [
+            "QUESTION_CREATE",
+            "QUESTION_UPDATE",
+            "RELATION_CREATE"
+          ]
+        },
+        "opportunity_id": {
+          "type": "string"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "question": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "question_id",
+            "description",
+            "signal_ids",
+            "method_ids",
+            "id",
+            "hypothesis",
+            "required_signals",
+            "evaluation_trigger",
+            "evaluation_model",
+            "evidence_model",
+            "cortex_weights"
+          ],
+          "properties": {
+            "question_id": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "signal_ids": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string"
+              }
+            },
+            "method_ids": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string"
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "hypothesis": {
+              "type": "string"
+            },
+            "required_signals": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string"
+              }
+            },
+            "evaluation_trigger": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "logical_operator",
+                "rules"
+              ],
+              "properties": {
+                "logical_operator": {
+                  "type": "string",
+                  "enum": [
+                    "AND",
+                    "OR"
+                  ]
+                },
+                "rules": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "signal_id",
+                      "operator",
+                      "threshold",
+                      "window_ms"
+                    ],
+                    "properties": {
+                      "signal_id": {
+                        "type": "string"
+                      },
+                      "operator": {
+                        "type": "string",
+                        "enum": [
+                          ">",
+                          "<",
+                          ">=",
+                          "<=",
+                          "==",
+                          "!="
+                        ]
+                      },
+                      "threshold": {
+                        "type": "number"
+                      },
+                      "window_ms": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "evaluation_model": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "method_id",
+                "version",
+                "parameters"
+              ],
+              "properties": {
+                "method_id": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "parameters": {
+                  "type": "object"
+                }
+              }
+            },
+            "evidence_model": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "base_strength",
+                "decay_rate_per_sec"
+              ],
+              "properties": {
+                "base_strength": {
+                  "type": "number",
+                  "minimum": 0.0,
+                  "maximum": 1.0
+                },
+                "decay_rate_per_sec": {
+                  "type": "number",
+                  "minimum": 0.0,
+                  "maximum": 1.0
+                }
+              }
+            },
+            "cortex_weights": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "focus",
+                "stress",
+                "autonomy",
+                "fatigue"
+              ],
+              "properties": {
+                "focus": {
+                  "type": "number",
+                  "minimum": -1.0,
+                  "maximum": 1.0
+                },
+                "stress": {
+                  "type": "number",
+                  "minimum": -1.0,
+                  "maximum": 1.0
+                },
+                "autonomy": {
+                  "type": "number",
+                  "minimum": -1.0,
+                  "maximum": 1.0
+                },
+                "fatigue": {
+                  "type": "number",
+                  "minimum": -1.0,
+                  "maximum": 1.0
+                }
+              }
+            }
+          }
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "novelty_justification": {
+          "type": "string"
+        },
+        "computability_justification": {
+          "type": "string"
+        },
+        "individuality_justification": {
+          "type": "string"
+        },
+        "uncertainty_justification": {
+          "type": "string"
+        },
+        "evidence_basis": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "signals",
+            "methods"
+          ],
+          "properties": {
+            "signals": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "methods": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0
+        }
+      }
+    }
+  }
+}

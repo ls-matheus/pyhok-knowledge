@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pyhok.org/schema/v2/feature-method.schema.json",
+  "title": "PyHokFeatureMethod",
+  "description": "Extensible description of an algorithm used to derive or transform signals.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "version",
+    "operation",
+    "input_arity",
+    "implementation"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^method_[a-z0-9_]+$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "operation": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_arity": {
+      "type": "string",
+      "enum": [
+        "UNARY",
+        "MULTI_INPUT"
+      ]
+    },
+    "implementation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "engine_component",
+        "minimum_engine_version"
+      ],
+      "properties": {
+        "engine_component": {
+          "type": "string"
+        },
+        "minimum_engine_version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        }
+      }
+    },
+    "parameters": {
+      "type": "object"
+    }
+  }
+}

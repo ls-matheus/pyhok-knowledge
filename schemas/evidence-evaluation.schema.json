@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PyHokEvidenceEvaluation",
+  "type": "object",
+  "required": [
+    "question_id",
+    "timestamp_ms",
+    "activated",
+    "evidence",
+    "signal_quality",
+    "effective_evidence"
+  ],
+  "properties": {
+    "question_id": {
+      "type": "string",
+      "pattern": "^q_[a-z0-9_]+$"
+    },
+    "timestamp_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "activated": {
+      "type": "boolean"
+    },
+    "evidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "signal_quality": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "effective_evidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    }
+  },
+  "additionalProperties": false
+}

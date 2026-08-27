@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pyhok.org/schema/v1/release.schema.json",
+  "title": "PyHokDatasetReleaseManifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "dataset_version",
+    "schema_version",
+    "created_at",
+    "release_id",
+    "parent_release_id",
+    "engine_compatibility",
+    "files"
+  ],
+  "properties": {
+    "dataset_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "release_id": {
+      "type": "string",
+      "pattern": "^sha256:[a-fA-F0-9]{64}$"
+    },
+    "parent_release_id": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^sha256:[a-fA-F0-9]{64}$"
+        }
+      ]
+    },
+    "engine_compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "minimum",
+        "maximum_exclusive"
+      ],
+      "properties": {
+        "minimum": {
+          "type": "string"
+        },
+        "maximum_exclusive": {
+          "type": "string"
+        }
+      }
+    },
+    "files": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "signals",
+        "questions",
+        "relations"
+      ],
+      "properties": {
+        "signals": {
+          "$ref": "#/$defs/file_manifest"
+        },
+        "questions": {
+          "$ref": "#/$defs/file_manifest"
+        },
+        "relations": {
+          "$ref": "#/$defs/file_manifest"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "file_manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "count",
+        "sha256"
+      ],
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        }
+      }
+    }
+  }
+}
