@@ -4,20 +4,9 @@ on:
   schedule:
     - cron: "*/30 * * * *"
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - "generator/output/**"
-      - "scheduler/checkpoint.json"
-      - "scheduler/status.json"
-      - "evolution/ledger.jsonl"
-      - "evolution/rejected_claims.jsonl"
-      - "data/theses/**"
 
 permissions:
   contents: write
-  pull-requests: write
 
 concurrency:
   group: pyhok-continuous-discovery
@@ -42,9 +31,23 @@ jobs:
         run: |
           pip install jsonschema pytest google-genai
 
-      - name: Execute Continuous Discovery Engine Cycles
+      - name: Execute Continuous Discovery Engine (force 10 cycles)
         run: |
-          python scheduler/continuous_engine.py --max-cycles 10 --force
+          python scheduler/continuous_engine.py --max-cycles 10 --force --skip-git
+
+      - name: Show generated theses summary
+        run: |
+          python scheduler/continuous_engine.py --status
+
+      - name: Show theses JSON
+        run: |
+          python scheduler/continuous_engine.py --show-theses | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+print(f'Total theses generated: {data["total_theses"]}')
+for t in data['theses'][-5:]:
+    print(f'  [{t["thesis_id"]}] {t["opportunity_type"]} => {t["decision"]}')
+" || echo "No theses file yet"
 
       - name: Verify Quality Gates
         run: |
@@ -55,12 +58,20 @@ jobs:
           git config user.name "PyHok Discovery Bot"
           git config user.email "bot@pyhok.org"
 
-          git add generator/output/ data/theses/ evolution/ledger.jsonl evolution/rejected_claims.jsonl scheduler/checkpoint.json scheduler/status.json || true
+          git add -A generator/output/ data/theses/ evolution/ledger.jsonl evolution/rejected_claims.jsonl scheduler/checkpoint.json scheduler/status.json
 
           if git diff --cached --quiet; then
-            echo "No new theses or state changes to commit."
+            echo "No new theses or state changes to commit — nothing new was generated."
             exit 0
           fi
 
-          git commit -m "chore(discovery): publish continuous epistemic theses and ledger [skip ci]"
+          THESES_COUNT=$(python3 -c "
+import json, pathlib
+f = pathlib.Path('generator/output/theses.json')
+data = json.loads(f.read_text()) if f.exists() else {}
+print(data.get('total_theses', 0))
+" 2>/dev/null || echo "?")
+
+          git commit -m "chore(discovery): publish ${THESES_COUNT} epistemic theses [skip ci]"
           git push origin main
+          echo "Theses successfully published to GitHub!"

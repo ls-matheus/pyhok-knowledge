@@ -1,4 +1,4 @@
-# Ephemeral caches and environment files
+# Ephemeral caches
 *.tmp
 *.py[cod]
 __pycache__/
@@ -10,6 +10,7 @@ venv/
 .vscode/
 generator/input/agent_context.json
 
-# Ephemeral evaluations and manifests
+# Ledger and evaluations streams (kept as runtime ledgers or committed per cycle)
 evolution/post_evaluations.jsonl
 evolution/manifests/
+
