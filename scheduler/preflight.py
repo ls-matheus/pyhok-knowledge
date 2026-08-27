@@ -40,14 +40,10 @@ REQUIRED_MODULES = [
 
 SAFE_EPHEMERAL_PATTERNS = [
     r"^scheduler/status\.json$",
-    r"^scheduler/checkpoint\.json$",
     r"^generator/output/.*",
     r"^generator/input/.*",
-    r"^data/theses/.*",
     r"^evolution/ledger\.jsonl$",
     r"^evolution/post_evaluations\.jsonl$",
-    r"^evolution/rejected_claims\.jsonl$",
-    r"^data/v2/rejected-claims\.jsonl$",
     r".*__pycache__.*",
     r".*\.pytest_cache.*",
     r".*\.pyc$",

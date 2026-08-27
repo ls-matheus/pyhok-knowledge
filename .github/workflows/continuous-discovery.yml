@@ -1,0 +1,66 @@
+name: PyHok Continuous Epistemic Discovery Engine (7/0)
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "generator/output/**"
+      - "scheduler/checkpoint.json"
+      - "scheduler/status.json"
+      - "evolution/ledger.jsonl"
+      - "evolution/rejected_claims.jsonl"
+      - "data/theses/**"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: pyhok-continuous-discovery
+  cancel-in-progress: false
+
+jobs:
+  continuous-discovery:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install jsonschema pytest google-genai
+
+      - name: Execute Continuous Discovery Engine Cycles
+        run: |
+          python scheduler/continuous_engine.py --max-cycles 10 --force
+
+      - name: Verify Quality Gates
+        run: |
+          python scheduler/quality_gate.py
+
+      - name: Commit and Publish Generated Theses and Ledgers
+        run: |
+          git config user.name "PyHok Discovery Bot"
+          git config user.email "bot@pyhok.org"
+
+          git add generator/output/ data/theses/ evolution/ledger.jsonl evolution/rejected_claims.jsonl scheduler/checkpoint.json scheduler/status.json || true
+
+          if git diff --cached --quiet; then
+            echo "No new theses or state changes to commit."
+            exit 0
+          fi
+
+          git commit -m "chore(discovery): publish continuous epistemic theses and ledger [skip ci]"
+          git push origin main

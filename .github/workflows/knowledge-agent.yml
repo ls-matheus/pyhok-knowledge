@@ -2,7 +2,7 @@ name: PyHok Knowledge Agent
 
 on:
   schedule:
-    - cron: "0,30 11-23 * * *"
+    - cron: "0,30 * * * *"
   workflow_dispatch:
 
 permissions:
