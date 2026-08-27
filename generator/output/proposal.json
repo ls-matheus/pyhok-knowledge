@@ -1,13 +1,13 @@
 {
   "status": "PROPOSAL_READY",
   "proposal": {
-    "proposal_id": "prop_thesis_gap_237d6b7b",
+    "proposal_id": "prop_thesis_gap_9f59fbc7",
     "operation": "OPEN_THESIS_CREATE",
     "opportunity_id": "opp_gap_sig_stream_1_2f0867",
     "domain": "domain_1",
     "thesis": {
-      "thesis_id": "thesis_gap_237d6b7b",
-      "cycle_id": "cycle_20260827_224835_460377_fd151c",
+      "thesis_id": "thesis_gap_9f59fbc7",
+      "cycle_id": "cycle_20260827_225022_672874_32cdce",
       "opportunity_type": "GAP",
       "opportunity_id": "opp_gap_sig_stream_1_2f0867",
       "target_domain": "domain_1",
@@ -69,7 +69,7 @@
             "value": "sig_stream_1",
             "binding": "sig_stream_1",
             "binding_source": "SYNAPSE",
-            "bound_at": "2026-08-27T22:48:39.629347+00:00"
+            "bound_at": "2026-08-27T22:50:26.821842+00:00"
           },
           {
             "id": "var_functional_outcome",
@@ -83,7 +83,7 @@
             "value": "sig_stream_1",
             "binding": "sig_stream_1",
             "binding_source": "SYNAPSE",
-            "bound_at": "2026-08-27T22:48:39.629355+00:00"
+            "bound_at": "2026-08-27T22:50:26.821850+00:00"
           }
         ],
         "unbound_variables": []
@@ -91,7 +91,7 @@
       "review_result": {
         "decision": "REJECT",
         "epistemic_score": 0.8,
-        "quarantine_reason": "REPEATS_PRIOR_REJECTED_CLAIM: Proposal matches prior rejection 'prop_unknown' via EXACT_MATCH (similarity=1.00, prior_reason='CRITIC_SEVERITY_TOO_HIGH (0.6)')",
+        "quarantine_reason": "CRITIC_SEVERITY_TOO_HIGH (0.6)",
         "assigned_epistemic_status": "SPECULATION",
         "critic": {
           "critic_role": "ADVERSARIAL_CRITIC",
@@ -137,9 +137,9 @@
         }
       },
       "decision": "REJECT",
-      "rejection_reason": "REPEATS_PRIOR_REJECTED_CLAIM: Proposal matches prior rejection 'prop_unknown' via EXACT_MATCH (similarity=1.00, prior_reason='CRITIC_SEVERITY_TOO_HIGH (0.6)')",
+      "rejection_reason": "CRITIC_SEVERITY_TOO_HIGH (0.6)",
       "epistemic_status": "SPECULATION",
-      "timestamp": "2026-08-27T22:48:39.630450+00:00"
+      "timestamp": "2026-08-27T22:50:26.823116+00:00"
     },
     "confidence": 0.8
   }
