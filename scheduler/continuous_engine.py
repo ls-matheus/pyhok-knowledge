@@ -490,7 +490,7 @@ def main() -> int:
 
     if args.once:
         res = engine.run_single_cycle()
-        return 0 if res.get("status") in ("SUCCESS", "ACCEPT", "COMPLETED", "QUARANTINE", "REJECT", "NO_NEW_OPPORTUNITIES") else 1
+        return 0 if res.get("status") in ("SUCCESS", "ACCEPT", "COMPLETED", "QUARANTINE", "REJECT", "NO_NEW_OPPORTUNITIES", "SKIPPED") else 1
 
     res = engine.run_forever()
     return 0 if res.get("status") == "STOPPED" else 1
