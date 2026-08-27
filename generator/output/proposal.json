@@ -1,18 +1,18 @@
 {
   "status": "PROPOSAL_READY",
   "proposal": {
-    "proposal_id": "prop_thesis_gap_8f147e6c",
+    "proposal_id": "prop_thesis_gap_5c3e99c7",
     "operation": "OPEN_THESIS_CREATE",
     "opportunity_id": "opp_gap_sig_stream_7_5d5817",
     "domain": "domain_1",
     "thesis": {
-      "thesis_id": "thesis_gap_8f147e6c",
-      "cycle_id": "cycle_20260827_125459_976661_d8ad2a",
+      "thesis_id": "thesis_gap_5c3e99c7",
+      "cycle_id": "cycle_20260827_125643_288520_4c297d",
       "opportunity_type": "GAP",
       "opportunity_id": "opp_gap_sig_stream_7_5d5817",
       "target_domain": "domain_1",
       "description": "Observational gap: Signal sig_stream_7 in domain domain_1 has zero investigational theses.",
-      "hypothesis_template": "Modulation behavior of signal sig_stream_7 under stimulus transition regimes.",
+      "hypothesis_template": "Cross-signal correlation mapping between sig_stream_7 and contextual telemetry.",
       "investigation_status": "OPEN",
       "open_variables": [
         {
@@ -69,7 +69,7 @@
             "value": "sig_stream_1",
             "binding": "sig_stream_1",
             "binding_source": "SYNAPSE",
-            "bound_at": "2026-08-27T12:55:04.896806+00:00"
+            "bound_at": "2026-08-27T12:56:46.400979+00:00"
           },
           {
             "id": "var_functional_outcome",
@@ -83,7 +83,7 @@
             "value": "sig_stream_1",
             "binding": "sig_stream_1",
             "binding_source": "SYNAPSE",
-            "bound_at": "2026-08-27T12:55:04.896813+00:00"
+            "bound_at": "2026-08-27T12:56:46.400986+00:00"
           }
         ],
         "unbound_variables": []
@@ -139,7 +139,7 @@
       "decision": "REJECT",
       "rejection_reason": "REPEATS_PRIOR_REJECTED_CLAIM: Proposal matches prior rejection 'prop_unknown' via TOKEN_PARAPHRASE (similarity=0.78, prior_reason='CRITIC_SEVERITY_TOO_HIGH (0.6)')",
       "epistemic_status": "SPECULATION",
-      "timestamp": "2026-08-27T12:55:04.898019+00:00"
+      "timestamp": "2026-08-27T12:56:46.402028+00:00"
     },
     "confidence": 0.8
   }
