@@ -1,10 +1,10 @@
 {
   "engine_version": "2.0.0-continuous-discovery",
-  "saved_at": "2026-08-27T01:40:19.348155+00:00",
-  "last_cycle_id": "cycle_20260827_014019_032703_6b1803",
+  "saved_at": "2026-08-27T01:54:29.348797+00:00",
+  "last_cycle_id": "cycle_20260827_015421_330164_e7e26a",
   "engine_status": "STOPPED",
-  "stop_reason": "max_cycles_reached",
-  "total_cycles": 56,
+  "stop_reason": "max_consecutive_errors",
+  "total_cycles": 59,
   "successful_cycles": 1,
   "discoveries_total": 46,
   "new_theses_generated": 26,
@@ -12,8 +12,8 @@
   "accepted_proposals": 0,
   "quarantined_theses": 1,
   "quarantined_proposals": 1,
-  "rejected_theses": 55,
-  "rejected_proposals": 55,
+  "rejected_theses": 58,
+  "rejected_proposals": 58,
   "bindings_total": 0,
   "variables_unbound": 52,
   "variables_candidate": 0,
@@ -21,7 +21,7 @@
   "contradictions_found": 0,
   "knowledge_nodes": 2,
   "knowledge_edges": 1,
-  "novelty_mean": 0.88,
-  "information_gain_mean": 0.85,
-  "total_errors": 0
+  "novelty_mean": 0.0,
+  "information_gain_mean": 0.0,
+  "total_errors": 5
 }

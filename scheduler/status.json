@@ -1,23 +1,23 @@
 {
-  "status": "SKIPPED",
+  "status": "CIRCUIT_OPEN",
   "current_cycle_id": null,
-  "last_run": null,
+  "last_run": "2026-08-26T22:54:13.283854-03:00",
   "last_success": null,
-  "last_failure": null,
-  "last_error": null,
-  "last_stop_reason": "window_closed: outside_scheduled_window",
+  "last_failure": "2026-08-26T22:54:13.755526-03:00",
+  "last_error": "run_audit failed: GEMINI_API_KEY is missing.\n",
+  "last_stop_reason": "pipeline_error",
   "processed_proposals": [],
   "last_opportunity_id": null,
   "last_proposal_id": null,
   "last_question_id": null,
   "last_branch": null,
   "last_pr_url": null,
-  "consecutive_failures": 0,
+  "consecutive_failures": 3,
   "circuit_breaker": {
-    "is_open": false,
+    "is_open": true,
     "max_consecutive_failures": 3,
-    "tripped_at": null,
-    "trip_reason": null
+    "tripped_at": "2026-08-26T22:54:13.755526-03:00",
+    "trip_reason": "3 consecutive failures: run_audit failed: GEMINI_API_KEY is missing.\n"
   },
   "audit_trail": {
     "main_before_sha": null,
@@ -27,11 +27,11 @@
     "state_after_hash": null
   },
   "stats": {
-    "total_runs": 0,
+    "total_runs": 3,
     "successful_runs": 0,
-    "failed_runs": 0,
+    "failed_runs": 3,
     "skipped_runs": 11,
     "blocked_runs": 14,
-    "circuit_breaker_trips": 0
+    "circuit_breaker_trips": 1
   }
 }
