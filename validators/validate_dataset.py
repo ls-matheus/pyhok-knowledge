@@ -4,7 +4,15 @@ import json
 import sys
 from pathlib import Path
 
-from jsonschema import Draft7Validator, RefResolver
+from jsonschema import Draft7Validator
+
+try:
+    from referencing import Registry, Resource
+    from referencing.jsonschema import DRAFT7
+    HAS_REFERENCING = True
+except ImportError:
+    HAS_REFERENCING = False
+    from jsonschema import RefResolver
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,27 +32,34 @@ def validate_schema(instance, schema_name):
     schema_path = SCHEMA_DIR / schema_name
     schema = load_schema(schema_name)
 
-    schema_store = {}
-    for path in SCHEMA_DIR.glob("*.json"):
-        s = load_json(path)
-        if "$id" in s:
-            schema_store[s["$id"]] = s
-        schema_store[path.name] = s
-        schema_store[path.resolve().as_uri()] = s
+    if HAS_REFERENCING:
+        resources = []
+        for path in SCHEMA_DIR.glob("*.json"):
+            s = load_json(path)
+            res = Resource.from_contents(s, default_specification=DRAFT7)
+            if "$id" in s:
+                resources.append((s["$id"], res))
+            resources.append((path.name, res))
+            resources.append((path.resolve().as_uri(), res))
+        registry = Registry().with_resources(resources)
+        validator = Draft7Validator(schema, registry=registry)
+    else:
+        schema_store = {}
+        for path in SCHEMA_DIR.glob("*.json"):
+            s = load_json(path)
+            if "$id" in s:
+                schema_store[s["$id"]] = s
+            schema_store[path.name] = s
+            schema_store[path.resolve().as_uri()] = s
 
-    resolver = RefResolver(
-        schema_path.resolve().as_uri(),
-        schema,
-        store=schema_store,
-    )
-
-    validator = Draft7Validator(
-        schema,
-        resolver=resolver,
-    )
+        resolver = RefResolver(
+            schema_path.resolve().as_uri(),
+            schema,
+            store=schema_store,
+        )
+        validator = Draft7Validator(schema, resolver=resolver)
 
     errors = sorted(validator.iter_errors(instance), key=str)
-
     return errors
 
 
