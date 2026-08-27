@@ -1,5 +1,5 @@
 {
-  "status": "BLOCKED",
+  "status": "CIRCUIT_OPEN",
   "current_cycle_id": null,
   "last_run": "2026-08-26T22:54:13.283854-03:00",
   "last_success": null,

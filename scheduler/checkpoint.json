@@ -1,9 +1,9 @@
 {
   "engine_version": "2.0.0-continuous-discovery",
-  "saved_at": "2026-08-27T03:51:15.759616+00:00",
-  "last_cycle_id": "cycle_20260827_035115_725754_689d25",
+  "saved_at": "2026-08-27T03:53:56.633738+00:00",
+  "last_cycle_id": "cycle_20260827_035348_603092_eb6b09",
   "engine_status": "STOPPED",
-  "stop_reason": "max_cycles_reached",
+  "stop_reason": "max_consecutive_errors",
   "total_cycles": 64,
   "successful_cycles": 1,
   "discoveries_total": 46,
@@ -23,5 +23,5 @@
   "knowledge_edges": 1,
   "novelty_mean": 0.0,
   "information_gain_mean": 0.0,
-  "total_errors": 45
+  "total_errors": 50
 }
