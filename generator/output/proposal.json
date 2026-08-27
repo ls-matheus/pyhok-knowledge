@@ -1,18 +1,18 @@
 {
   "status": "PROPOSAL_READY",
   "proposal": {
-    "proposal_id": "prop_thesis_gap_c607ae74",
+    "proposal_id": "prop_thesis_gap_094f5076",
     "operation": "OPEN_THESIS_CREATE",
     "opportunity_id": "opp_gap_sig_stream_2_a27c16",
     "domain": "domain_2",
     "thesis": {
-      "thesis_id": "thesis_gap_c607ae74",
-      "cycle_id": "cycle_20260827_071027_434314_0cd438",
+      "thesis_id": "thesis_gap_094f5076",
+      "cycle_id": "cycle_20260827_071133_039982_9d93d0",
       "opportunity_type": "GAP",
       "opportunity_id": "opp_gap_sig_stream_2_a27c16",
       "target_domain": "domain_2",
       "description": "Observational gap: Signal sig_stream_2 in domain domain_2 has zero investigational theses.",
-      "hypothesis_template": "Cross-signal correlation mapping between sig_stream_2 and contextual telemetry.",
+      "hypothesis_template": "Signal drift and baseline stability characteristics for sig_stream_2.",
       "investigation_status": "OPEN",
       "open_variables": [
         {
@@ -69,7 +69,7 @@
             "value": "sig_stream_2",
             "binding": "sig_stream_2",
             "binding_source": "SYNAPSE",
-            "bound_at": "2026-08-27T07:10:29.816658+00:00"
+            "bound_at": "2026-08-27T07:11:34.831167+00:00"
           },
           {
             "id": "var_functional_outcome",
@@ -83,7 +83,7 @@
             "value": "sig_stream_2",
             "binding": "sig_stream_2",
             "binding_source": "SYNAPSE",
-            "bound_at": "2026-08-27T07:10:29.816665+00:00"
+            "bound_at": "2026-08-27T07:11:34.831173+00:00"
           }
         ],
         "unbound_variables": []
@@ -91,7 +91,7 @@
       "review_result": {
         "decision": "REJECT",
         "epistemic_score": 0.8,
-        "quarantine_reason": "REPEATS_PRIOR_REJECTED_CLAIM: Proposal matches prior rejection 'prop_unknown' via TOKEN_PARAPHRASE (similarity=0.78, prior_reason='CRITIC_SEVERITY_TOO_HIGH (0.6)')",
+        "quarantine_reason": "CRITIC_SEVERITY_TOO_HIGH (0.6)",
         "assigned_epistemic_status": "SPECULATION",
         "critic": {
           "critic_role": "ADVERSARIAL_CRITIC",
@@ -137,9 +137,9 @@
         }
       },
       "decision": "REJECT",
-      "rejection_reason": "REPEATS_PRIOR_REJECTED_CLAIM: Proposal matches prior rejection 'prop_unknown' via TOKEN_PARAPHRASE (similarity=0.78, prior_reason='CRITIC_SEVERITY_TOO_HIGH (0.6)')",
+      "rejection_reason": "CRITIC_SEVERITY_TOO_HIGH (0.6)",
       "epistemic_status": "SPECULATION",
-      "timestamp": "2026-08-27T07:10:29.817612+00:00"
+      "timestamp": "2026-08-27T07:11:34.831979+00:00"
     },
     "confidence": 0.8
   }
