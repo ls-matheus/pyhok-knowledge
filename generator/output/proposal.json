@@ -1,18 +1,18 @@
 {
   "status": "PROPOSAL_READY",
   "proposal": {
-    "proposal_id": "prop_thesis_gap_cc9feb1b",
+    "proposal_id": "prop_thesis_gap_e373e471",
     "operation": "OPEN_THESIS_CREATE",
     "opportunity_id": "opp_gap_sig_stream_9_daa246",
     "domain": "domain_0",
     "thesis": {
-      "thesis_id": "thesis_gap_cc9feb1b",
-      "cycle_id": "cycle_20260827_044954_379666_16786f",
+      "thesis_id": "thesis_gap_e373e471",
+      "cycle_id": "cycle_20260827_045101_334673_a51beb",
       "opportunity_type": "GAP",
       "opportunity_id": "opp_gap_sig_stream_9_daa246",
       "target_domain": "domain_0",
       "description": "Observational gap: Signal sig_stream_9 in domain domain_0 has zero investigational theses.",
-      "hypothesis_template": "Observational variance and statistical distribution dynamics of signal sig_stream_9.",
+      "hypothesis_template": "Predictive feature extraction and variance bounds for signal sig_stream_9.",
       "investigation_status": "OPEN",
       "open_variables": [
         {
@@ -69,7 +69,7 @@
             "value": "sig_stream_0",
             "binding": "sig_stream_0",
             "binding_source": "SYNAPSE",
-            "bound_at": "2026-08-27T04:49:56.253456+00:00"
+            "bound_at": "2026-08-27T04:51:03.699852+00:00"
           },
           {
             "id": "var_functional_outcome",
@@ -83,7 +83,7 @@
             "value": "sig_stream_0",
             "binding": "sig_stream_0",
             "binding_source": "SYNAPSE",
-            "bound_at": "2026-08-27T04:49:56.253464+00:00"
+            "bound_at": "2026-08-27T04:51:03.699859+00:00"
           }
         ],
         "unbound_variables": []
@@ -139,7 +139,7 @@
       "decision": "REJECT",
       "rejection_reason": "REPEATS_PRIOR_REJECTED_CLAIM: Proposal matches prior rejection 'prop_unknown' via TOKEN_PARAPHRASE (similarity=0.75, prior_reason='CRITIC_SEVERITY_TOO_HIGH (0.6)')",
       "epistemic_status": "SPECULATION",
-      "timestamp": "2026-08-27T04:49:56.254606+00:00"
+      "timestamp": "2026-08-27T04:51:03.701094+00:00"
     },
     "confidence": 0.8
   }
