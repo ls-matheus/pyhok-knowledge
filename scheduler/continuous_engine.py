@@ -19,6 +19,10 @@ if str(ROOT) not in sys.path:
 
 CHECKPOINT_FILE = ROOT / "scheduler/checkpoint.json"
 STATUS_FILE = ROOT / "scheduler/status.json"
+THESES_OUTPUT_FILE = ROOT / "generator/output/theses.json"
+THESES_STREAM_FILE = ROOT / "generator/output/theses_stream.jsonl"
+THESES_OUTPUT_DIR = ROOT / "generator/output/theses"
+PROPOSAL_OUTPUT_FILE = ROOT / "generator/output/proposal.json"
 
 from scheduler.orchestrator import EvolutionOrchestrator, log
 from scheduler.state import record_blocked, record_failure, record_success
@@ -28,6 +32,71 @@ from evolution.epistemic.synapse import SinapseBindingEngine, bind_open_thesis
 from evolution.epistemic.review_chamber import EpistemicReviewChamber, run_epistemic_review
 from evolution.epistemic.quarantine import REJECTED_CLAIMS_FILE, record_quarantined_claim
 from evolution.ledger import load_knowledge_state, persist_knowledge_entity, append_ledger_event
+
+
+def record_thesis_output(
+    thesis_record: dict[str, Any],
+    output_file: Path = THESES_OUTPUT_FILE,
+    stream_file: Path = THESES_STREAM_FILE,
+    output_dir: Path = THESES_OUTPUT_DIR,
+    proposal_file: Path = PROPOSAL_OUTPUT_FILE,
+) -> None:
+    """
+    Persists live thesis output for visibility in generator/output/theses.json,
+    generator/output/theses/<id>.json, and generator/output/theses_stream.jsonl.
+    """
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        th_id = thesis_record.get("thesis_id", f"thesis_{uuid.uuid4().hex[:8]}")
+        indiv_file = output_dir / f"{th_id}.json"
+        tmp_indiv = indiv_file.with_suffix(".tmp")
+        tmp_indiv.write_text(json.dumps(thesis_record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        tmp_indiv.replace(indiv_file)
+
+        stream_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(stream_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps(thesis_record, ensure_ascii=False) + "\n")
+
+        existing_theses = []
+        if output_file.exists():
+            try:
+                data = json.loads(output_file.read_text(encoding="utf-8"))
+                if isinstance(data, dict):
+                    existing_theses = data.get("theses", [])
+                elif isinstance(data, list):
+                    existing_theses = data
+            except Exception:
+                existing_theses = []
+
+        existing_theses.append(thesis_record)
+        if len(existing_theses) > 500:
+            existing_theses = existing_theses[-500:]
+
+        consolidated = {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "total_theses": len(existing_theses),
+            "theses": existing_theses
+        }
+        tmp_out = output_file.with_suffix(".tmp")
+        tmp_out.write_text(json.dumps(consolidated, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        tmp_out.replace(output_file)
+
+        proposal_payload = {
+            "status": "PROPOSAL_READY",
+            "proposal": {
+                "proposal_id": f"prop_{th_id}",
+                "operation": "OPEN_THESIS_CREATE",
+                "opportunity_id": thesis_record.get("opportunity_id"),
+                "domain": thesis_record.get("target_domain", "general"),
+                "thesis": thesis_record,
+                "confidence": thesis_record.get("review_result", {}).get("epistemic_score", 0.85)
+            }
+        }
+        tmp_prop = proposal_file.with_suffix(".tmp")
+        tmp_prop.write_text(json.dumps(proposal_payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        tmp_prop.replace(proposal_file)
+    except Exception:
+        pass
 
 
 class ContinuousEngineError(Exception):
@@ -225,7 +294,10 @@ class ContinuousKnowledgeEngine:
         try:
             # 1. Observe Knowledge Base & Graph
             try:
-                state = self.orchestrator.load_knowledge_state()
+                if hasattr(self.orchestrator, "load_knowledge_state") and callable(getattr(self.orchestrator, "load_knowledge_state")):
+                    state = self.orchestrator.load_knowledge_state()
+                else:
+                    state = load_knowledge_state()
                 if not isinstance(state, dict):
                     state = {}
             except Exception:
@@ -307,7 +379,36 @@ class ContinuousKnowledgeEngine:
                         pass
 
                 self.discovery_engine.register_historical_proposal(thesis)
-                cycle_result = {"status": "SUCCESS" if decision in ("ACCEPT", "QUARANTINE") else decision, "decision": decision, "cycle_id": cycle_id}
+
+                # Persist to output JSON for real-time visibility
+                thesis_record = {
+                    "thesis_id": thesis.get("thesis_id"),
+                    "cycle_id": cycle_id,
+                    "opportunity_type": best_opp.get("opportunity_type", "GAP"),
+                    "opportunity_id": best_opp.get("opportunity_id"),
+                    "target_domain": best_opp.get("target_domain", "general"),
+                    "description": best_opp.get("description"),
+                    "hypothesis_template": thesis.get("hypothesis_template"),
+                    "investigation_status": thesis.get("investigation_status", "OPEN"),
+                    "open_variables": thesis.get("open_variables", []),
+                    "relational_hypotheses": thesis.get("relational_hypotheses", []),
+                    "synapse_binding": {
+                        "status": bound_thesis.get("resolution", "DEFERRED_TO_SYNAPSE"),
+                        "bound_variables": [v for v in bound_thesis.get("open_variables", []) if v.get("status") == "BOUND"],
+                        "unbound_variables": [v for v in bound_thesis.get("open_variables", []) if v.get("status") == "UNBOUND"],
+                    },
+                    "review_result": {
+                        "decision": decision,
+                        "epistemic_score": review_result.get("epistemic_score", 0.0),
+                        "critic": review_result.get("critic_review", {}),
+                        "verifier": review_result.get("verifier_review", {}),
+                    },
+                    "decision": decision,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                }
+                record_thesis_output(thesis_record)
+
+                cycle_result = {"status": "SUCCESS" if decision in ("ACCEPT", "QUARANTINE") else decision, "decision": decision, "cycle_id": cycle_id, "thesis": thesis_record}
 
             else:
                 # Closed-world baseline: Execute standard orchestrator cycle
@@ -440,11 +541,30 @@ class ContinuousKnowledgeEngine:
         print(f"Information gain:  {info_mean:.2f}")
         print("")
 
+        if THESES_OUTPUT_FILE.exists():
+            try:
+                data = json.loads(THESES_OUTPUT_FILE.read_text(encoding="utf-8"))
+                theses_list = data.get("theses", [])
+                if theses_list:
+                    print("────────────────────────────")
+                    print(f"LATEST GENERATED THESES ({len(theses_list)} total):")
+                    for th in theses_list[-5:]:
+                        th_id = th.get("thesis_id", "unknown")
+                        opp_t = th.get("opportunity_type", "GAP")
+                        dec = th.get("decision", "REJECT")
+                        tmpl = th.get("hypothesis_template", "")[:65]
+                        print(f"  • [{th_id}] {opp_t} ({dec})")
+                        print(f"    Template: {tmpl}...")
+                    print("")
+            except Exception:
+                pass
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="PyHok Continuous Epistemic Discovery Engine (7/0)")
     parser.add_argument("--once", action="store_true", help="Execute exactly one cycle and exit deterministically")
     parser.add_argument("--status", action="store_true", help="Print formatted observability status dashboard")
+    parser.add_argument("--show-theses", action="store_true", help="Print all generated theses formatted as JSON")
     parser.add_argument("--resume", action="store_true", help="Explicitly resume state from checkpoint.json")
     parser.add_argument("--max-cycles", type=int, default=None, help="Maximum number of cycles to execute before stopping")
     parser.add_argument("--cycles", type=int, default=None, help="Alias for max-cycles")
@@ -453,6 +573,13 @@ def main() -> int:
     parser.add_argument("--force", action="store_true", help="Force execution overriding closed window guard")
     parser.add_argument("--skip-git", action="store_true", help="Skip git operations during cycle")
     args = parser.parse_args()
+
+    if args.show_theses:
+        if THESES_OUTPUT_FILE.exists():
+            print(THESES_OUTPUT_FILE.read_text(encoding="utf-8"))
+        else:
+            print(json.dumps({"generated_at": datetime.now(timezone.utc).isoformat(), "total_theses": 0, "theses": []}, indent=2))
+        return 0
 
     max_c = args.max_cycles or args.cycles
     if args.once:
@@ -486,10 +613,12 @@ def main() -> int:
         print(f"Accepted Theses:   {engine.metrics['accepted_theses']}")
         print(f"Graph Nodes:       {engine.graph.node_count}")
         print(f"Graph Edges:       {engine.graph.edge_count}")
+        print(f"Theses JSON Output: {THESES_OUTPUT_FILE}")
         return 0 if res.get("status") == "STOPPED" else 1
 
     if args.once:
         res = engine.run_single_cycle()
+        return 0 if res.get("status") in ("SUCCESS", "ACCEPT", "COMPLETED", "QUARANTINE", "REJECT", "NO_NEW_OPPORTUNITIES", "SKIPPED") else 1
 
     res = engine.run_forever()
     return 0 if res.get("status") == "STOPPED" else 1
