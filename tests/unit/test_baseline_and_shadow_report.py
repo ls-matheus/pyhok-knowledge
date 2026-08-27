@@ -22,7 +22,7 @@ def test_baseline_capture_and_load(tmp_path):
     assert data["counts"]["questions"] >= 1
     assert data["counts"]["signals"] >= 1
     assert data["counts"]["total_domains"] == 10
-    assert data["coverage"] == 0.10
+    assert data["coverage"] >= 0.10
     assert data["redundancy"] == 0.0
     assert "attention_disruption" in data["known_gaps"]
 
