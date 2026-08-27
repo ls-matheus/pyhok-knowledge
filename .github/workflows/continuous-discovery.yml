@@ -8,6 +8,9 @@ on:
 permissions:
   contents: write
 
+# Garante que apenas 1 instância rode por vez.
+# Se um ciclo anterior ainda estiver rodando quando o próximo for disparado,
+# o novo é descartado (skip) em vez de enfileirar — evita congestionamento.
 concurrency:
   group: pyhok-continuous-discovery
   cancel-in-progress: false
@@ -16,7 +19,28 @@ jobs:
   continuous-discovery:
     runs-on: ubuntu-latest
 
+    # Verifica se já existe algum run ativo do mesmo workflow antes de executar.
+    # Se houver, o job cancela a si mesmo com exit 0 (sem erro) e sem poluir o log.
     steps:
+      - name: Check for in-progress run (skip if busy)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          WORKFLOW_ID="continuous-discovery.yml"
+          RUNNING=$(gh run list             --workflow "$WORKFLOW_ID"             --status in_progress             --json databaseId             --jq "length")
+
+          QUEUED=$(gh run list             --workflow "$WORKFLOW_ID"             --status queued             --json databaseId             --jq "length")
+
+          TOTAL=$(( RUNNING + QUEUED ))
+          echo "In-progress: $RUNNING | Queued: $QUEUED | Total active: $TOTAL"
+
+          if [ "$TOTAL" -gt 1 ]; then
+            echo "::warning::Another instance is already running ($RUNNING in_progress, $QUEUED queued). Skipping this run to prevent overlap."
+            exit 0
+          fi
+
+          echo "No concurrent run detected. Proceeding."
+
       - name: Checkout main
         uses: actions/checkout@v4
         with:
