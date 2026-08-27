@@ -38,13 +38,7 @@ def run_quality_gates(
         ("measurement_gate", [sys.executable, str(ROOT / "evolution/measurement_gate.py")]),
         ("epistemic_gate", [sys.executable, str(ROOT / "evolution/epistemic_gate.py")]),
         ("continuous_discovery_gate", [sys.executable, str(ROOT / "evolution/continuous_discovery_gate.py")]),
-        ("git_diff_check", [
-            "git", "diff", "--check", "--", ".",
-            ":!generator/output",
-            ":!evolution/*.jsonl",
-            ":!scheduler/*.json",
-            ":!data/theses",
-        ]),
+        ("git_diff_check", ["git", "diff", "--check"]),
     ]
 
     results = []

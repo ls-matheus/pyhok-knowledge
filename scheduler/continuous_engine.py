@@ -6,7 +6,7 @@ import gc
 import json
 import os
 import signal
-import sys
+import hashlib
 import time
 import uuid
 from datetime import datetime, timezone
@@ -106,34 +106,23 @@ def record_thesis_output(
       - generator/output/rejected_stream.jsonl
     """
     try:
-        th_id = thesis_record.get("thesis_id", f"thesis_{uuid.uuid4().hex[:8]}")
+        # Generate deterministic thesis ID if missing
+        th_id = thesis_record.get("thesis_id")
+        if not th_id:
+            # deterministic hash based on opportunity, cycle and hypothesis template
+            raw = f"{thesis_record.get('opportunity_id','')}|{cycle_id}|{thesis_record.get('hypothesis_template','')}"
+            th_id = hashlib.sha256(raw.encode()).hexdigest()[:12]
         decision = str(thesis_record.get("decision", "")).upper()
 
-        # 1. Determine target directory and streams based on decision
-        if decision == "ACCEPT":
-            target_dir = validated_dir
-            target_stream = validated_stream_file
-            target_list_file = validated_file
-        elif decision == "QUARANTINE":
-            target_dir = quarantined_dir
-            target_stream = None
-            target_list_file = quarantined_file
-        else:
-            target_dir = rejected_dir
-            target_stream = rejected_stream_file
-            target_list_file = rejected_file
-
-        target_dir.mkdir(parents=True, exist_ok=True)
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        # Write categorized individual JSON
-        indiv_file = target_dir / f"{th_id}.json"
+        # Write categorized individual JSON with decision and timestamp in filename
+        ts_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        indiv_file = target_dir / f"{th_id}_{decision.lower()}_{ts_str}.json"
         tmp_indiv = indiv_file.with_suffix(".tmp")
         tmp_indiv.write_text(json.dumps(thesis_record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         tmp_indiv.replace(indiv_file)
 
-        # Also write to root theses dir for flat access
-        root_indiv = output_dir / f"{th_id}.json"
+        # Also write to root theses dir for flat access with decision and timestamp
+        root_indiv = output_dir / f"{th_id}_{decision.lower()}_{ts_str}.json"
         tmp_root_indiv = root_indiv.with_suffix(".tmp")
         tmp_root_indiv.write_text(json.dumps(thesis_record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         tmp_root_indiv.replace(root_indiv)
@@ -452,6 +441,24 @@ class ContinuousKnowledgeEngine:
                         self.metrics["variables_candidate"] += 1
                     else:
                         self.metrics["variables_unbound"] += 1
+
+                # Determine target directory, stream, and list file based on decision
+                if decision == "ACCEPT":
+                    target_dir = validated_dir
+                    target_stream = validated_stream_file
+                    target_list_file = validated_file
+                elif decision == "QUARANTINE":
+                    target_dir = quarantined_dir
+                    target_stream = None
+                    target_list_file = quarantined_file
+                else:
+                    target_dir = rejected_dir
+                    target_stream = rejected_stream_file
+                    target_list_file = rejected_file
+                
+                # Ensure directories exist
+                target_dir.mkdir(parents=True, exist_ok=True)
+                output_dir.mkdir(parents=True, exist_ok=True)
 
                 if decision == "ACCEPT":
                     self.metrics["accepted_theses"] += 1

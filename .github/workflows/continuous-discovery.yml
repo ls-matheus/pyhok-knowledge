@@ -32,11 +32,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          RUNNING=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "continuous-discovery.yml" --status in_progress --json databaseId --jq "length")
-          QUEUED=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "continuous-discovery.yml" --status queued --json databaseId --jq "length")
+          RUNNING=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "continuous-discovery.yml" --status in_progress --json databaseId --jq "map(select(.databaseId != $GITHUB_RUN_ID)) | length")
+          QUEUED=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "continuous-discovery.yml" --status queued --json databaseId --jq "map(select(.databaseId != $GITHUB_RUN_ID)) | length")
           TOTAL=$(( RUNNING + QUEUED ))
           echo "in_progress=$RUNNING  queued=$QUEUED  total_active=$TOTAL"
-          if [ "$TOTAL" -gt 1 ]; then
+          if [ "$TOTAL" -gt 0 ]; then
             echo "::warning::Another run is active ($RUNNING in_progress, $QUEUED queued). Skipping to avoid overlap."
             exit 0
           fi
@@ -55,8 +55,8 @@ jobs:
       - name: Install dependencies
         run: pip install jsonschema pytest google-genai
 
-      - name: Run 25 continuous epistemic discovery cycles
-        run: python scheduler/continuous_engine.py --max-cycles 25 --force --skip-git
+      - name: Run 50 continuous epistemic discovery cycles
+        run: python scheduler/continuous_engine.py --max-cycles 50 --force --skip-git
 
       - name: Print observability dashboard
         run: python scheduler/continuous_engine.py --status
@@ -84,6 +84,7 @@ jobs:
           echo "Published ${MSG} to GitHub successfully."
 
       - name: Trigger next continuous discovery relay
+        if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
