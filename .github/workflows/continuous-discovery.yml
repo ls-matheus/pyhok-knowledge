@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: pyhok-continuous-discovery
@@ -39,7 +40,7 @@ jobs:
             echo "::warning::Another run is active ($RUNNING in_progress, $QUEUED queued). Skipping to avoid overlap."
             exit 0
           fi
-          echo "No concurrent run detected. Proceeding."
+          echo "No concurrent run detected. Proceeding with discovery cycles."
 
       - name: Checkout main
         uses: actions/checkout@v4
@@ -54,14 +55,15 @@ jobs:
       - name: Install dependencies
         run: pip install jsonschema pytest google-genai
 
-      - name: Run 10 continuous epistemic discovery cycles
-        run: python scheduler/continuous_engine.py --max-cycles 10 --force --skip-git
+      - name: Run 25 continuous epistemic discovery cycles
+        run: python scheduler/continuous_engine.py --max-cycles 25 --force --skip-git
 
       - name: Print observability dashboard
         run: python scheduler/continuous_engine.py --status
 
-      - name: Show last 5 generated theses
-        run: python scheduler/continuous_engine.py --show-theses | python3 -c "import sys,json; d=json.load(sys.stdin); [print(f'  [{t[\"thesis_id\"]}] {t[\"opportunity_type\"]} => {t[\"decision\"]}') for t in d['theses'][-5:]]"
+      - name: Show validated and rejected theses breakdown
+        run: |
+          python scheduler/continuous_engine.py --show-theses | python3 -c "import sys,json; d=json.load(sys.stdin); c=d.get('counts', {}); print(f\"Total: {d.get('total_theses', 0)} | Validated: {c.get('validated', 0)} | Rejected: {c.get('rejected', 0)} | Quarantined: {c.get('quarantined', 0)}\")"
         continue-on-error: true
 
       - name: Verify quality gates
@@ -76,7 +78,14 @@ jobs:
             echo "Nothing new to commit."
             exit 0
           fi
-          COUNT=$(python3 -c "import json,pathlib; f=pathlib.Path('generator/output/theses.json'); d=json.loads(f.read_text()) if f.exists() else {}; print(d.get('total_theses',0))" 2>/dev/null || echo "?")
-          git commit -m "chore(discovery): publish ${COUNT} epistemic theses [skip ci]"
+          MSG=$(python3 -c "import json,pathlib; f=pathlib.Path('generator/output/theses.json'); d=json.loads(f.read_text()) if f.exists() else {}; c=d.get('counts', {}); print(f\"{d.get('total_theses',0)} theses ({c.get('validated',0)} validated, {c.get('rejected',0)} rejected)\")" 2>/dev/null || echo "theses")
+          git commit -m "chore(discovery): publish ${MSG} [skip ci]"
           git push origin main
-          echo "Published ${COUNT} theses to GitHub."
+          echo "Published ${MSG} to GitHub successfully."
+
+      - name: Trigger next continuous discovery relay
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Triggering next continuous relay..."
+          gh workflow run continuous-discovery.yml --repo "$GITHUB_REPOSITORY" || echo "Relay will be picked up by schedule."
