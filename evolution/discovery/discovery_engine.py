@@ -308,6 +308,16 @@ class EpistemicDiscoveryEngine:
         if opp_type == 'GAP':
             sig_target = sources[0] if sources else 'unknown_signal'
             template = f'Investigation of uncharacterized observational variance in signal {sig_target}.'
+            gap_dimensions = [
+                f'Observational variance and statistical distribution dynamics of signal {sig_target}.',
+                f'Response threshold and operational latency bounds for signal {sig_target}.',
+                f'Cross-signal correlation mapping between {sig_target} and contextual telemetry.',
+                f'Signal drift and baseline stability characteristics for {sig_target}.',
+                f'Modulation behavior of signal {sig_target} under stimulus transition regimes.',
+                f'Predictive feature extraction and variance bounds for signal {sig_target}.',
+            ]
+            dim_idx = int(hashlib.sha256(f"{opp_id}_{c_id}".encode()).hexdigest(), 16) % len(gap_dimensions)
+            template = gap_dimensions[dim_idx]
             open_vars = [
                 {
                     'id': f'var_{sig_target}_predictor',
@@ -346,6 +356,13 @@ class EpistemicDiscoveryEngine:
         elif opp_type == 'CONTRADICTION':
             contra_id = opportunity.get('contradiction_id', 'contra_unknown')
             template = f'Resolving empirical contradiction {contra_id} under parameter boundary conditions.'
+            contra_angles = [
+                f'Resolving empirical contradiction {contra_id} under parameter boundary conditions.',
+                f'Harmonizing diverging operator thresholds in conflict {contra_id} via piecewise partitioning.',
+                f'Boundary condition sensitivity analysis for conflicting claims in {contra_id}.',
+            ]
+            c_idx = int(hashlib.sha256(f"{opp_id}_{c_id}".encode()).hexdigest(), 16) % len(contra_angles)
+            template = contra_angles[c_idx]
             open_vars = [
                 {
                     'id': 'var_boundary_condition',

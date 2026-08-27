@@ -6,7 +6,7 @@ import gc
 import json
 import os
 import signal
-import hashlib
+import sys
 import time
 import uuid
 from datetime import datetime, timezone
@@ -76,6 +76,71 @@ def _append_to_json_list_file(file_path: Path, item: dict[str, Any], max_items: 
     tmp_path.replace(file_path)
 
 
+def format_thesis_filename(thesis_record: dict[str, Any]) -> str:
+    """
+    Produces deterministic, human-readable, self-explanatory filenames for theses.
+    Examples:
+      - ACCEPTED_GAP_sig_test_pointer_velocity_3941ef.json
+      - REJECTED_GAP_sig_test_pointer_velocity__REPEATS_CLAIM_3941ef.json
+      - QUARANTINED_INCOMPLETE_var_boundary_condition__UNANCHORED_DERIVATION_12d39a.json
+    """
+    raw_dec = str(thesis_record.get("decision", "REJECT")).upper()
+    prefix = "ACCEPTED" if raw_dec == "ACCEPT" else ("QUARANTINED" if raw_dec == "QUARANTINE" else "REJECTED")
+    opp_type = str(thesis_record.get("opportunity_type", "GAP")).upper()
+    domain = str(thesis_record.get("target_domain", "general")).lower().replace(" ", "_")
+
+    # Extract clean signal / entity identifier
+    signal = ""
+    opp_id = str(thesis_record.get("opportunity_id", ""))
+    if "sig_" in opp_id:
+        parts = [p for p in opp_id.split("_") if p.startswith("sig") or "pointer" in p or "reaction" in p or "jitter" in p]
+        if parts:
+            signal = "_".join(parts[:2])
+    if not signal:
+        open_vars = thesis_record.get("open_variables", [])
+        if open_vars and isinstance(open_vars[0], dict):
+            signal = str(open_vars[0].get("name", "")).lower().replace(" ", "_")[:20]
+    if not signal:
+        signal = domain
+
+    # Clean alphanumeric signal name
+    clean_signal = "".join(c for c in signal if c.isalnum() or c == "_")[:25].strip("_")
+    if not clean_signal:
+        clean_signal = "signal"
+
+    # Short hash / cycle suffix for uniqueness
+    th_id = str(thesis_record.get("thesis_id", ""))
+    short_id = th_id.split("_")[-1] if "_" in th_id else th_id[:8]
+    if not short_id:
+        short_id = uuid.uuid4().hex[:6]
+
+    # Specific forensic reason tag for rejections / quarantine
+    reason_tag = ""
+    if prefix != "ACCEPTED":
+        raw_reason = str(thesis_record.get("rejection_reason") or thesis_record.get("quarantine_reason") or "")
+        if "REPEATS_PRIOR" in raw_reason or "repetition" in raw_reason.lower():
+            reason_tag = "__REPEATS_CLAIM"
+        elif "OVERREACH" in raw_reason or "DIAGNOSTIC" in raw_reason:
+            reason_tag = "__DIAGNOSTIC_OVERREACH"
+        elif "CIRCULARITY" in raw_reason:
+            reason_tag = "__CIRCULARITY"
+        elif "CRITIC" in raw_reason or "SEVERITY" in raw_reason:
+            reason_tag = "__CRITIC_CHALLENGE"
+        elif "CONTRADICTION" in raw_reason:
+            reason_tag = "__CONTRADICTION"
+        elif "DERIVATION" in raw_reason or "DEPTH" in raw_reason:
+            reason_tag = "__UNANCHORED_DERIVATION"
+        elif "VERIFIER" in raw_reason:
+            reason_tag = "__VERIFIER_UNRESOLVED"
+        elif raw_reason:
+            clean_tag = "".join(c for c in raw_reason[:20] if c.isalnum() or c == "_")
+            reason_tag = f"__{clean_tag}" if clean_tag else "__HOLD"
+        else:
+            reason_tag = "__EPISTEMIC_HOLD"
+
+    return f"{prefix}_{opp_type}_{clean_signal}{reason_tag}_{short_id}.json"
+
+
 def record_thesis_output(
     thesis_record: dict[str, Any],
     output_file: Path = THESES_OUTPUT_FILE,
@@ -97,6 +162,9 @@ def record_thesis_output(
       - generator/output/theses/validated/<id>.json
       - generator/output/theses/rejected/<id>.json
       - generator/output/theses/quarantined/<id>.json
+      - generator/output/theses/validated/<human_readable_name>.json
+      - generator/output/theses/rejected/<human_readable_name>.json
+      - generator/output/theses/quarantined/<human_readable_name>.json
       - generator/output/theses_validated.json
       - generator/output/theses_rejected.json
       - generator/output/theses_quarantined.json
@@ -106,23 +174,37 @@ def record_thesis_output(
       - generator/output/rejected_stream.jsonl
     """
     try:
-        # Generate deterministic thesis ID if missing
-        th_id = thesis_record.get("thesis_id")
-        if not th_id:
-            # deterministic hash based on opportunity, cycle and hypothesis template
-            raw = f"{thesis_record.get('opportunity_id','')}|{cycle_id}|{thesis_record.get('hypothesis_template','')}"
-            th_id = hashlib.sha256(raw.encode()).hexdigest()[:12]
+        th_id = thesis_record.get("thesis_id", f"thesis_{uuid.uuid4().hex[:8]}")
         decision = str(thesis_record.get("decision", "")).upper()
 
-        # Write categorized individual JSON with decision and timestamp in filename
-        ts_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        indiv_file = target_dir / f"{th_id}_{decision.lower()}_{ts_str}.json"
+        # 1. Determine target directory and streams based on decision
+        if decision == "ACCEPT":
+            target_dir = validated_dir
+            target_stream = validated_stream_file
+            target_list_file = validated_file
+        elif decision == "QUARANTINE":
+            target_dir = quarantined_dir
+            target_stream = None
+            target_list_file = quarantined_file
+        else:
+            target_dir = rejected_dir
+            target_stream = rejected_stream_file
+            target_list_file = rejected_file
+
+        target_dir.mkdir(parents=True, exist_ok=True)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Write categorized individual JSON
+        indiv_file = target_dir / f"{th_id}.json"
+        # Write categorized individual JSON with clear, readable filename
+        filename = format_thesis_filename(thesis_record)
+        indiv_file = target_dir / filename
         tmp_indiv = indiv_file.with_suffix(".tmp")
         tmp_indiv.write_text(json.dumps(thesis_record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         tmp_indiv.replace(indiv_file)
 
-        # Also write to root theses dir for flat access with decision and timestamp
-        root_indiv = output_dir / f"{th_id}_{decision.lower()}_{ts_str}.json"
+        # Also write to root theses dir for flat access
+        root_indiv = output_dir / f"{th_id}.json"
         tmp_root_indiv = root_indiv.with_suffix(".tmp")
         tmp_root_indiv.write_text(json.dumps(thesis_record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         tmp_root_indiv.replace(root_indiv)
@@ -441,24 +523,6 @@ class ContinuousKnowledgeEngine:
                         self.metrics["variables_candidate"] += 1
                     else:
                         self.metrics["variables_unbound"] += 1
-
-                # Determine target directory, stream, and list file based on decision
-                if decision == "ACCEPT":
-                    target_dir = validated_dir
-                    target_stream = validated_stream_file
-                    target_list_file = validated_file
-                elif decision == "QUARANTINE":
-                    target_dir = quarantined_dir
-                    target_stream = None
-                    target_list_file = quarantined_file
-                else:
-                    target_dir = rejected_dir
-                    target_stream = rejected_stream_file
-                    target_list_file = rejected_file
-                
-                # Ensure directories exist
-                target_dir.mkdir(parents=True, exist_ok=True)
-                output_dir.mkdir(parents=True, exist_ok=True)
 
                 if decision == "ACCEPT":
                     self.metrics["accepted_theses"] += 1

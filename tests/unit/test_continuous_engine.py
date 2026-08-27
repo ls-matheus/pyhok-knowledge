@@ -178,3 +178,127 @@ def test_continuous_engine_anti_loop_negative_memory_prevention(tmp_path):
     # Continuous engine intercepts repeat claim before entering expensive cycle processing
     assert mem_check["has_prior_rejection"] is True
     assert mem_check["match_type"] == "EXACT_MATCH"
+
+
+def test_format_thesis_filename():
+    from scheduler.continuous_engine import format_thesis_filename
+
+    th_acc = {
+        "thesis_id": "thesis_gap_3941ef",
+        "decision": "ACCEPT",
+        "opportunity_type": "GAP",
+        "opportunity_id": "opp_sig_test_pointer_velocity",
+        "target_domain": "neuro_sensory",
+    }
+    fname_acc = format_thesis_filename(th_acc)
+    assert fname_acc.startswith("ACCEPTED_GAP_")
+    assert "3941ef" in fname_acc
+
+    th_rej = {
+        "thesis_id": "thesis_gap_3941ef",
+        "decision": "REJECT",
+        "opportunity_type": "GAP",
+        "opportunity_id": "opp_sig_test_pointer_velocity",
+        "target_domain": "neuro_sensory",
+        "rejection_reason": "REPEATS_PRIOR_REJECTED_CLAIM",
+    }
+    fname_rej = format_thesis_filename(th_rej)
+    assert fname_rej.startswith("REJECTED_GAP_")
+    assert "REPEATS_CLAIM" in fname_rej
+
+
+def test_record_thesis_output_categorization(tmp_path):
+    from scheduler.continuous_engine import record_thesis_output
+
+    out_file = tmp_path / "theses.json"
+    val_file = tmp_path / "theses_validated.json"
+    rej_file = tmp_path / "theses_rejected.json"
+    quar_file = tmp_path / "theses_quarantined.json"
+
+    stream_file = tmp_path / "theses_stream.jsonl"
+    val_stream = tmp_path / "validated_stream.jsonl"
+    rej_stream = tmp_path / "rejected_stream.jsonl"
+
+    out_dir = tmp_path / "theses"
+    val_dir = tmp_path / "theses/validated"
+    rej_dir = tmp_path / "theses/rejected"
+    quar_dir = tmp_path / "theses/quarantined"
+    prop_file = tmp_path / "proposal.json"
+
+    # 1. Record an accepted thesis
+    th_accepted = {
+        "thesis_id": "th_val_001",
+        "decision": "ACCEPT",
+        "opportunity_type": "GAP",
+        "opportunity_id": "opp_sig_pointer_velocity",
+        "hypothesis_template": "Validated relationship between X and Y",
+        "review_result": {"decision": "ACCEPT", "epistemic_score": 0.95},
+    }
+    record_thesis_output(
+        th_accepted,
+        output_file=out_file,
+        validated_file=val_file,
+        rejected_file=rej_file,
+        quarantined_file=quar_file,
+        stream_file=stream_file,
+        validated_stream_file=val_stream,
+        rejected_stream_file=rej_stream,
+        output_dir=out_dir,
+        validated_dir=val_dir,
+        rejected_dir=rej_dir,
+        quarantined_dir=quar_dir,
+        proposal_file=prop_file,
+    )
+
+    # 2. Record a rejected thesis
+    th_rejected = {
+        "thesis_id": "th_rej_001",
+        "decision": "REJECT",
+        "opportunity_type": "CONTRADICTION",
+        "opportunity_id": "opp_sig_jitter",
+        "hypothesis_template": "Rejected speculative claim",
+        "rejection_reason": "DIAGNOSTIC_OVERREACH",
+        "review_result": {"decision": "REJECT", "epistemic_score": 0.10},
+    }
+    record_thesis_output(
+        th_rejected,
+        output_file=out_file,
+        validated_file=val_file,
+        rejected_file=rej_file,
+        quarantined_file=quar_file,
+        stream_file=stream_file,
+        validated_stream_file=val_stream,
+        rejected_stream_file=rej_stream,
+        output_dir=out_dir,
+        validated_dir=val_dir,
+        rejected_dir=rej_dir,
+        quarantined_dir=quar_dir,
+        proposal_file=prop_file,
+    )
+
+    # Verify individual JSON files exist in their respective categorized directories
+    val_files = list(val_dir.glob("*.json"))
+    assert len(val_files) == 1
+    assert val_files[0].name.startswith("ACCEPTED_GAP_")
+
+    rej_files = list(rej_dir.glob("*.json"))
+    assert len(rej_files) == 1
+    assert rej_files[0].name.startswith("REJECTED_CONTRADICTION_")
+
+    # Verify categorized list JSON files
+    val_data = json.loads(val_file.read_text())
+    assert val_data["total"] == 1
+    assert val_data["theses"][0]["thesis_id"] == "th_val_001"
+
+    rej_data = json.loads(rej_file.read_text())
+    assert rej_data["total"] == 1
+    assert rej_data["theses"][0]["thesis_id"] == "th_rej_001"
+
+    # Verify master theses.json has counts and grouped arrays
+    master = json.loads(out_file.read_text())
+    assert master["total_theses"] == 2
+    assert master["counts"]["validated"] == 1
+    assert master["counts"]["rejected"] == 1
+    assert master["counts"]["quarantined"] == 0
+    assert len(master["validated_theses"]) == 1
+    assert len(master["rejected_theses"]) == 1
