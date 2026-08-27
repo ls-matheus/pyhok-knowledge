@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -14,9 +15,9 @@ from evolution.epistemic.quarantine import record_quarantined_claim, check_prior
 
 class EpistemicReviewChamber:
     """
-    Coordinates the parallel multi-agent epistemic review chamber (v2.1):
-    Generator -> [Critic || Verifier || Red-Team || Active Memory] -> Blind Judge -> (Accept / Quarantine).
-    Uses ThreadPoolExecutor for true concurrent peer execution while ensuring absolute determinism.
+    Coordinates the parallel multi-agent epistemic review chamber (v2.2):
+    Generator -> Sanitizer -> [Critic || Verifier || Red-Team || Active Memory] -> Blind Judge -> (Accept / Quarantine).
+    Guarantees that input proposals are never mutated in-place and executes peer reviewers in isolated threads.
     """
 
     def __init__(
@@ -54,6 +55,9 @@ class EpistemicReviewChamber:
                 "reviewed_proposal": proposal,
             }
 
+        # Make a deep copy to prevent mutation of the caller's input payload
+        reviewed_proposal = copy.deepcopy(proposal)
+
         # 1. Execute 4 isolated peer reviews in parallel
         critic_review: dict[str, Any] = {}
         verifier_review: dict[str, Any] = {}
@@ -61,10 +65,10 @@ class EpistemicReviewChamber:
         memory_review: dict[str, Any] = {}
 
         tasks = {
-            "critic": lambda: self.critic.review_proposal(proposal, knowledge_state),
-            "verifier": lambda: self.verifier.verify_provenance(proposal, knowledge_state),
-            "red_team": lambda: self.red_team.evaluate_alternatives(proposal, knowledge_state),
-            "memory": lambda: check_prior_rejections(proposal, file_path=self.quarantine_file),
+            "critic": lambda: self.critic.review_proposal(reviewed_proposal, knowledge_state),
+            "verifier": lambda: self.verifier.verify_provenance(reviewed_proposal, knowledge_state),
+            "red_team": lambda: self.red_team.evaluate_alternatives(reviewed_proposal, knowledge_state),
+            "memory": lambda: check_prior_rejections(reviewed_proposal, file_path=self.quarantine_file),
         }
 
         with ThreadPoolExecutor(max_workers=self.parallel_workers) as executor:
@@ -87,7 +91,7 @@ class EpistemicReviewChamber:
 
         # 2. Blind Epistemic Judgment (Deterministic input order)
         judge_ruling = self.judge.judge(
-            proposal=proposal,
+            proposal=reviewed_proposal,
             critic_review=critic_review,
             verifier_review=verifier_review,
             red_team_review=red_team_review,
@@ -99,7 +103,7 @@ class EpistemicReviewChamber:
         # 3. Controlled Persistence (Only if not ACCEPT)
         if decision in ("QUARANTINE", "REJECT"):
             record_quarantined_claim(
-                proposal=proposal,
+                proposal=reviewed_proposal,
                 judge_ruling=judge_ruling,
                 critic_review=critic_review,
                 verifier_review=verifier_review,
@@ -108,9 +112,9 @@ class EpistemicReviewChamber:
                 file_path=self.quarantine_file
             )
 
-        # 4. Attach Provenance Metadata to Proposal if ACCEPTED
+        # 4. Attach Provenance Metadata to Enriched Proposal if ACCEPTED
         elif decision == "ACCEPT":
-            q_data = proposal.get("question") if isinstance(proposal.get("question"), dict) else proposal
+            q_data = reviewed_proposal.get("question") if isinstance(reviewed_proposal.get("question"), dict) else reviewed_proposal
             if isinstance(q_data, dict):
                 q_data["epistemic_status"] = judge_ruling.get("assigned_epistemic_status", "HYPOTHESIS")
                 if "provenance" not in q_data or not isinstance(q_data["provenance"], dict):
@@ -137,7 +141,7 @@ class EpistemicReviewChamber:
             "verifier_review": verifier_review,
             "red_team_review": red_team_review,
             "memory_review": memory_review,
-            "reviewed_proposal": proposal,
+            "reviewed_proposal": reviewed_proposal,
         }
 
 
