@@ -1,0 +1,17 @@
+{
+  "thesis_id": "thesis_invalid_dogmatic",
+  "hypothesis_template": "Testing dogmatic overreach.",
+  "investigation_status": "OPEN",
+  "open_variables": [
+    {
+      "id": "var_definitive_cause_of_autism",
+      "role": "predictor",
+      "type": "signal",
+      "status": "UNBOUND",
+      "binding": null,
+      "binding_source": null
+    }
+  ],
+  "relational_hypotheses": [],
+  "resolution": "DEFERRED_TO_SYNAPSE"
+}

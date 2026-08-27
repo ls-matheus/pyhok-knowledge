@@ -74,9 +74,10 @@ def _safe_float(val: Any, default: float = 0.0, min_val: float = 0.0, max_val: f
 
 class BlindEpistemicJudge:
     """
-    Blind Epistemic Judge (v2.2):
+    Blind Epistemic Judge (v2.3):
     Role: Hierarchically adjudicate proposals, compute normalized epistemic vector, and assign categorical status.
     Principle of Absolute Blindness: Operates exclusively on recursively sanitized proposals, completely isolated from Generator self-assessed scores.
+    Supports both canonical bound questions and open investigative theses.
     """
 
     def judge(
@@ -221,7 +222,7 @@ class BlindEpistemicJudge:
             "dissenting_challenges": challenges,
             "contradictions": contradictions,
             "alternative_hypotheses": alternative_hypotheses,
-            "sanitized_proposal_id": sanitized.get("proposal_id", sanitized.get("id", "prop_unknown")),
+            "sanitized_proposal_id": sanitized.get("proposal_id", sanitized.get("id", sanitized.get("thesis_id", "prop_unknown"))),
             "timestamp": datetime.now(ZoneInfo("UTC")).isoformat(),
         }
 

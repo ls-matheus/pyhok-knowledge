@@ -34,7 +34,7 @@ CAUSAL_OVERREACH_TERMS = [
 
 class AdversarialCritic:
     """
-    Adversarial Epistemic Critic:
+    Adversarial Epistemic Critic (v2.2):
     Role: Scrutinize, stress-test, and attempt to disprove or identify critical vulnerabilities in the proposed hypothesis.
     """
 
@@ -67,10 +67,19 @@ class AdversarialCritic:
         if not isinstance(q_data, dict):
             q_data = {}
 
-        hypothesis = str(q_data.get("hypothesis", "") or "")
+        hypothesis = str(q_data.get("hypothesis", "") or q_data.get("hypothesis_template", "") or "")
         req_signals = q_data.get("required_signals", [])
         if not isinstance(req_signals, list):
             req_signals = []
+
+        open_vars = q_data.get("open_variables", [])
+        if not isinstance(open_vars, list):
+            open_vars = []
+
+        is_open_investigation = (
+            q_data.get("investigation_status") in ("OPEN", "PARTIALLY_BOUND")
+            or (len(open_vars) > 0 and q_data.get("resolution") == "DEFERRED_TO_SYNAPSE")
+        )
 
         trigger = q_data.get("evaluation_trigger", {})
         if not isinstance(trigger, dict):
@@ -97,35 +106,36 @@ class AdversarialCritic:
             challenges.append("Hypothesis statement is trivially short, vague, or empty.")
             severity += 0.50
 
-        # 4. Check for operational trigger rules
+        # 4. Check for operational trigger rules (deferred for open investigations)
         if len(rules) == 0:
-            challenges.append("Evaluation trigger contains zero operational rules.")
-            severity += 0.60
+            if not is_open_investigation:
+                challenges.append("Evaluation trigger contains zero operational rules.")
+                severity += 0.60
+        else:
+            rule_signals = [r.get("signal_id") for r in rules if isinstance(r, dict) and r.get("signal_id")]
+            for rs in rule_signals:
+                if rs not in req_signals:
+                    challenges.append(f"Trigger rule references signal '{rs}' not declared in required_signals.")
+                    severity += 0.30
 
-        rule_signals = [r.get("signal_id") for r in rules if isinstance(r, dict) and r.get("signal_id")]
-        for rs in rule_signals:
-            if rs not in req_signals:
-                challenges.append(f"Trigger rule references signal '{rs}' not declared in required_signals.")
-                severity += 0.30
-
-        # 5. Check for valid thresholds and operators
-        valid_operators = {">", "<", ">=", "<=", "==", "!="}
-        for r in rules:
-            if not isinstance(r, dict):
-                challenges.append("Rule in trigger is not a valid dictionary object.")
-                severity += 0.30
-                continue
-            op = r.get("operator")
-            if op not in valid_operators:
-                challenges.append(f"Invalid logical operator '{op}' in trigger rule.")
-                severity += 0.35
-            thresh = r.get("threshold")
-            if thresh is None or not isinstance(thresh, (int, float)) or isinstance(thresh, bool):
-                challenges.append("Rule threshold is missing or not a numerical value.")
-                severity += 0.30
-            elif abs(thresh) > 1e6:
-                challenges.append(f"Extreme/tautological threshold detected: {thresh}")
-                severity += 0.25
+            # 5. Check for valid thresholds and operators
+            valid_operators = {">", "<", ">=", "<=", "==", "!="}
+            for r in rules:
+                if not isinstance(r, dict):
+                    challenges.append("Rule in trigger is not a valid dictionary object.")
+                    severity += 0.30
+                    continue
+                op = r.get("operator")
+                if op not in valid_operators:
+                    challenges.append(f"Invalid logical operator '{op}' in trigger rule.")
+                    severity += 0.35
+                thresh = r.get("threshold")
+                if thresh is None or not isinstance(thresh, (int, float)) or isinstance(thresh, bool):
+                    challenges.append("Rule threshold is missing or not a numerical value.")
+                    severity += 0.30
+                elif abs(thresh) > 1e6:
+                    challenges.append(f"Extreme/tautological threshold detected: {thresh}")
+                    severity += 0.25
 
         # 6. Check for direct semantic contradiction with existing canonical questions
         if knowledge_state and isinstance(knowledge_state, dict) and "questions" in knowledge_state:

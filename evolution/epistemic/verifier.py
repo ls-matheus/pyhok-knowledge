@@ -5,8 +5,9 @@ from typing import Any
 
 class EvidenceVerifier:
     """
-    Evidence and Provenance Verifier (v2.1):
-    Role: Verify topological provenance, prevent circular reasoning via transitive DAG traversal, compute derivation depth, and enforce strict epistemic status derivation.
+    Evidence and Provenance Verifier (v2.3):
+    Role: Verify topological provenance, prevent circular reasoning via transitive DAG traversal,
+    compute derivation depth, audit open variable bindings, and enforce strict epistemic status derivation.
     """
 
     MAX_DERIVATION_DEPTH = 3
@@ -45,10 +46,16 @@ class EvidenceVerifier:
         if not isinstance(q_data, dict):
             q_data = {}
 
-        q_id = q_data.get("id")
+        q_id = q_data.get("id") or q_data.get("thesis_id")
         req_signals = q_data.get("required_signals", [])
         if not isinstance(req_signals, list):
             req_signals = []
+
+        open_vars = q_data.get("open_variables", [])
+        if not isinstance(open_vars, list):
+            open_vars = []
+
+        inv_status = q_data.get("investigation_status", "BOUND" if req_signals else "OPEN")
 
         prov = q_data.get("provenance", {})
         if not isinstance(prov, dict):
@@ -58,9 +65,12 @@ class EvidenceVerifier:
         if not isinstance(derived_from, list):
             derived_from = []
 
-        evidence_roots = prov.get("evidence_roots", [])
-        if not isinstance(evidence_roots, list):
-            evidence_roots = []
+        if "evidence_roots" in prov:
+            evidence_roots = [r for r in prov.get("evidence_roots", []) if isinstance(r, str)]
+        else:
+            evidence_roots = [s for s in req_signals if isinstance(s, str)]
+
+        binding_source = prov.get("binding_source") or q_data.get("binding_source")
 
         # 1. Verify Pre-Existing Evidence against canonical dataset
         canonical_signals = set()
@@ -77,26 +87,22 @@ class EvidenceVerifier:
                     if isinstance(q, dict) and q.get("id"):
                         existing_questions_map[q.get("id")] = q
 
-        # Default evidence roots to declared signals if not provided
-        if not evidence_roots:
-            evidence_roots = [s for s in req_signals if isinstance(s, str)]
-
         # Check for missing signals
         if canonical_signals:
             missing_signals = [s for s in req_signals if s not in canonical_signals]
             if missing_signals:
                 errors.append(f"Required signals not found in pre-existing canonical signals: {missing_signals}")
-        elif len(req_signals) == 0:
+        elif len(req_signals) == 0 and not open_vars:
             errors.append("Proposal declares zero required signals.")
 
         # 2. Check for Direct Self-Derivation / Self-Loops
         if q_id and q_id in derived_from:
             circularity_detected = True
-            errors.append(f"Self-referential derivation detected: question '{q_id}' derives from itself.")
+            errors.append(f"Self-referential derivation detected: question/thesis '{q_id}' derives from itself.")
 
         if q_id and q_id in evidence_roots:
             circularity_detected = True
-            errors.append(f"Self-evident circularity detected: question '{q_id}' is listed as its own evidence root.")
+            errors.append(f"Self-evident circularity detected: question/thesis '{q_id}' is listed as its own evidence root.")
 
         # 3. Transitive Cycle Detection (BFS across entire ancestry graph)
         visited = set()
@@ -148,17 +154,26 @@ class EvidenceVerifier:
                 f"Derivation depth {derivation_depth} exceeds maximum limit ({self.max_depth}) with 0 independent empirical roots."
             )
 
-        # 7. Strict Eligibility for DERIVED status
+        # 7. Strict Eligibility for DERIVED status (Binding != Evidence; unrooted or unbound theses can NEVER be DERIVED)
+        has_unbound_vars = any(isinstance(v, dict) and v.get("status") == "UNBOUND" for v in open_vars)
         eligible_for_derived = (
             derivation_depth > 0
             and len(derived_from) > 0
             and independent_count >= 1
             and not circularity_detected
             and not errors
+            and not has_unbound_vars
+            and inv_status not in ("OPEN", "PARTIALLY_BOUND")
         )
 
         # Mathematical score bounds [0.0, 1.0]
-        evidence_strength_score = 1.0 if (req_signals and not errors) else max(0.0, 1.0 - (len(errors) * 0.35))
+        if req_signals and not errors:
+            evidence_strength_score = 1.0
+        elif open_vars and not errors:
+            evidence_strength_score = 0.85
+        else:
+            evidence_strength_score = max(0.0, 1.0 - (len(errors) * 0.35))
+
         independence_score = min(1.0, max(0.0, round(independent_count / max(1, derivation_depth), 4)))
         provenance_integrity_score = 0.0 if circularity_detected else (0.5 if warnings else 1.0)
         if errors and not circularity_detected:

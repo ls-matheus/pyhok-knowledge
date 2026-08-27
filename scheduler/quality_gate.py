@@ -30,20 +30,14 @@ def run_quality_gates(
     gates = [
         ("pytest", [
             sys.executable, "-m", "pytest", "-v",
-            "tests/unit/test_dataset_validation.py",
-            "tests/unit/test_proposal_validation.py",
-            "tests/unit/test_validation_pipeline.py",
-            "tests/unit/test_evolution_ledger.py",
-            "tests/unit/test_post_evaluator_and_metrics.py",
-            "tests/unit/test_baseline_and_shadow_report.py",
-            "tests/unit/test_measurement_gate.py",
-            "tests/unit/test_epistemic_firewall.py"
+            "-k", "not test_quality_gate"
         ]),
         ("validate_dataset", [sys.executable, str(ROOT / "validators/validate_dataset.py")]),
         ("conflict_check", [sys.executable, str(ROOT / "scripts/conflict_check.py")]),
         ("validate_proposal_tool", [sys.executable, str(ROOT / "tools/validate_proposal.py")]),
         ("measurement_gate", [sys.executable, str(ROOT / "evolution/measurement_gate.py")]),
         ("epistemic_gate", [sys.executable, str(ROOT / "evolution/epistemic_gate.py")]),
+        ("continuous_discovery_gate", [sys.executable, str(ROOT / "evolution/continuous_discovery_gate.py")]),
         ("git_diff_check", ["git", "diff", "--check"]),
     ]
 

@@ -171,6 +171,95 @@
         "SPECULATION"
       ]
     },
+    "investigation_status": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "PARTIALLY_BOUND",
+        "BOUND",
+        "UNDER_TEST",
+        "SUPPORTED",
+        "WEAKENED",
+        "REJECTED",
+        "QUARANTINED",
+        "SUPERSEDED"
+      ]
+    },
+    "open_variables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "role",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "predictor",
+              "outcome",
+              "confounder",
+              "moderator",
+              "condition",
+              "unspecified"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "signal",
+              "metric",
+              "state",
+              "context",
+              "unspecified"
+            ]
+          },
+          "domain": {
+            "type": "string"
+          },
+          "constraints": {
+            "type": "object"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "UNBOUND",
+              "BOUND"
+            ]
+          },
+          "binding": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "binding_source": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "SYNAPSE",
+              "EVIDENCE",
+              null
+            ]
+          },
+          "bound_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
     "provenance": {
       "type": "object",
       "additionalProperties": false,
@@ -222,6 +311,20 @@
         },
         "judge_ruling": {
           "type": "object"
+        },
+        "variable_bindings": {
+          "type": "object"
+        },
+        "binding_source": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "SYNAPSE",
+            "EVIDENCE",
+            null
+          ]
         }
       }
     }

@@ -35,6 +35,7 @@ class EpistemicReviewChamber:
         self.judge = judge or BlindEpistemicJudge()
         self.quarantine_file = quarantine_file
         self.parallel_workers = max(1, parallel_workers)
+        self._executor = ThreadPoolExecutor(max_workers=self.parallel_workers)
 
     def review(
         self,
@@ -71,9 +72,8 @@ class EpistemicReviewChamber:
             "memory": lambda: check_prior_rejections(reviewed_proposal, file_path=self.quarantine_file),
         }
 
-        with ThreadPoolExecutor(max_workers=self.parallel_workers) as executor:
-            future_to_key = {executor.submit(fn): key for key, fn in tasks.items()}
-            for future in as_completed(future_to_key):
+        future_to_key = {self._executor.submit(fn): key for key, fn in tasks.items()}
+        for future in as_completed(future_to_key):
                 key = future_to_key[future]
                 try:
                     result = future.result()

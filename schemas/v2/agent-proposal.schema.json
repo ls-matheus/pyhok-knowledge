@@ -19,6 +19,7 @@
     "proposal_type": {
       "type": "string",
       "enum": [
+        "OPEN_THESIS_CREATE",
         "QUESTION_CREATE",
         "QUESTION_UPDATE",
         "RELATION_CREATE",

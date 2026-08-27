@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pyhok.org/schemas/v2/contradiction.schema.json",
+  "title": "ContradictionEntity",
+  "description": "Represents an investigated epistemological contradiction between two claims or trigger rules.",
+  "type": "object",
+  "required": [
+    "contradiction_id",
+    "claim_a_id",
+    "claim_b_id",
+    "shared_signals",
+    "conflict_type",
+    "status",
+    "detected_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "contradiction_id": {
+      "type": "string",
+      "pattern": "^contra_[a-z0-9_]+$"
+    },
+    "claim_a_id": {
+      "type": "string"
+    },
+    "claim_b_id": {
+      "type": "string"
+    },
+    "shared_signals": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "conflict_type": {
+      "type": "string",
+      "enum": [
+        "OPERATOR_INVERSION",
+        "THRESHOLD_OVERLAP",
+        "MUTUALLY_EXCLUSIVE_HYPOTHESIS",
+        "POLARITY_CONFLICT"
+      ]
+    },
+    "conflicting_conditions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "DETECTED",
+        "UNDER_INVESTIGATION",
+        "RESOLVED_BY_THESIS",
+        "DISMISSED_CONFOUNDED"
+      ]
+    },
+    "resolution_thesis_id": {
+      "type": ["string", "null"]
+    },
+    "detected_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "cycle_id": {
+      "type": "string"
+    }
+  }
+}

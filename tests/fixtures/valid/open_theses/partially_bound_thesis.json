@@ -1,0 +1,37 @@
+{
+  "thesis_id": "thesis_pointer_deviation_partially_bound",
+  "hypothesis_template": "Pointer velocity deviation correlates with response latency variability under sustained load.",
+  "investigation_status": "PARTIALLY_BOUND",
+  "open_variables": [
+    {
+      "id": "var_pointer_predictor",
+      "role": "predictor",
+      "type": "signal",
+      "domain": "motor_control",
+      "status": "BOUND",
+      "binding": "sig_test_pointer_velocity",
+      "binding_source": "SYNAPSE",
+      "bound_at": "2026-08-27T00:00:00Z"
+    },
+    {
+      "id": "var_target_latency",
+      "role": "outcome",
+      "type": "metric",
+      "domain": "timing",
+      "status": "UNBOUND",
+      "binding": null,
+      "binding_source": null
+    }
+  ],
+  "relational_hypotheses": [
+    {
+      "source_var": "var_pointer_predictor",
+      "target_var": "var_target_latency",
+      "relation_type": "COVARIATE"
+    }
+  ],
+  "required_signals": [
+    "sig_test_pointer_velocity"
+  ],
+  "resolution": "DEFERRED_TO_SYNAPSE"
+}
