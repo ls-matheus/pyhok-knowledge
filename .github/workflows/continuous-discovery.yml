@@ -4,6 +4,16 @@ on:
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "generator/output/**"
+      - "data/theses/**"
+      - "evolution/ledger.jsonl"
+      - "evolution/rejected_claims.jsonl"
+      - "scheduler/checkpoint.json"
+      - "scheduler/status.json"
 
 permissions:
   contents: write
@@ -26,7 +36,7 @@ jobs:
           TOTAL=$(( RUNNING + QUEUED ))
           echo "in_progress=$RUNNING  queued=$QUEUED  total_active=$TOTAL"
           if [ "$TOTAL" -gt 1 ]; then
-            echo "::warning::Another run is active. Skipping to avoid overlap."
+            echo "::warning::Another run is active ($RUNNING in_progress, $QUEUED queued). Skipping to avoid overlap."
             exit 0
           fi
           echo "No concurrent run detected. Proceeding."
