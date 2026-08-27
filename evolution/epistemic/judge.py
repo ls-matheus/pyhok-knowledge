@@ -1,42 +1,82 @@
 from __future__ import annotations
 
+import math
+import re
 from typing import Any
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-PROHIBITED_GENERATOR_FIELDS = {
+
+PROHIBITED_KEY_STEMS = {
     "confidence",
-    "novelty_score",
-    "coverage_gain",
-    "generator_score",
-    "generator_verdict",
-    "self_assessment",
-    "predicted_metrics",
-    "internal_weights",
+    "confidencescore",
+    "noveltyscore",
+    "novelty",
+    "coveragegain",
+    "coverage",
+    "generatorscore",
+    "generatorverdict",
+    "selfassessment",
+    "predictedmetrics",
+    "internalweights",
+    "modelconfidence",
+    "generatorevaluation",
 }
 
 
-def sanitize_proposal_for_judge(proposal: Any) -> Any:
+def _is_prohibited_key(key: Any) -> bool:
+    if not isinstance(key, str):
+        return False
+    normalized = re.sub(r"[^a-zA-Z0-9]", "", key).lower()
+    return normalized in PROHIBITED_KEY_STEMS
+
+
+def sanitize_proposal_for_judge(proposal: Any, _visited_ids: set[int] | None = None) -> Any:
     """
-    Recursively purges all generator self-assessed metrics and scores to enforce strict Judge Blindness.
+    Recursively and immutably purges all generator self-assessed metrics, weights, and scores.
+    Handles arbitrary nesting, case-insensitivity, lists, dictionaries, and protects against cyclic object references.
     """
-    if isinstance(proposal, dict):
-        sanitized = {}
-        for k, v in proposal.items():
-            if k in PROHIBITED_GENERATOR_FIELDS:
-                continue
-            sanitized[k] = sanitize_proposal_for_judge(v)
-        return sanitized
-    elif isinstance(proposal, list):
-        return [sanitize_proposal_for_judge(item) for item in proposal]
-    return proposal
+    if _visited_ids is None:
+        _visited_ids = set()
+
+    obj_id = id(proposal)
+    if obj_id in _visited_ids:
+        # Cyclic structure detected; break cycle gracefully
+        return None
+    _visited_ids.add(obj_id)
+
+    try:
+        if isinstance(proposal, dict):
+            sanitized = {}
+            for k, v in proposal.items():
+                if _is_prohibited_key(k):
+                    continue
+                sanitized[k] = sanitize_proposal_for_judge(v, _visited_ids)
+            return sanitized
+        elif isinstance(proposal, list):
+            return [sanitize_proposal_for_judge(item, _visited_ids) for item in proposal]
+        return proposal
+    finally:
+        _visited_ids.remove(obj_id)
+
+
+def _safe_float(val: Any, default: float = 0.0, min_val: float = 0.0, max_val: float = 1.0) -> float:
+    try:
+        if val is None or isinstance(val, bool):
+            return default
+        f = float(val)
+        if not math.isfinite(f):
+            return default
+        return max(min_val, min(max_val, f))
+    except (ValueError, TypeError):
+        return default
 
 
 class BlindEpistemicJudge:
     """
-    Blind Epistemic Judge (v2.1):
+    Blind Epistemic Judge (v2.2):
     Role: Hierarchically adjudicate proposals, compute normalized epistemic vector, and assign categorical status.
-    Principle of Blindness: Operates exclusively on sanitized proposals, completely oblivious to Generator self-assessed scores.
+    Principle of Absolute Blindness: Operates exclusively on recursively sanitized proposals, completely isolated from Generator self-assessed scores.
     """
 
     def judge(
@@ -56,38 +96,47 @@ class BlindEpistemicJudge:
         red_team = red_team_review if isinstance(red_team_review, dict) else {}
         memory = memory_review if isinstance(memory_review, dict) else {}
 
-        critic_passes = critic.get("passes_adversarial_check", False)
-        critic_severity = min(1.0, max(0.0, float(critic.get("severity_score", 1.0))))
-        contradictions = critic.get("contradictions", [])
-        challenges = critic.get("challenges", [])
+        critic_passes = bool(critic.get("passes_adversarial_check", False))
+        critic_severity = _safe_float(critic.get("severity_score", 1.0 if not critic_passes else 0.0))
+        contradictions = critic.get("contradictions", []) if isinstance(critic.get("contradictions"), list) else []
+        challenges = critic.get("challenges", []) if isinstance(critic.get("challenges"), list) else []
 
-        verifier_passes = verifier.get("passes_verification", False)
-        circularity = verifier.get("circularity_detected", False)
-        derivation_depth = max(0, int(verifier.get("derivation_depth", 0)))
-        independent_count = max(0, int(verifier.get("independent_evidence_count", 0)))
-        verifier_errors = verifier.get("errors", [])
-        eligible_for_derived = verifier.get("eligible_for_derived_status", False)
+        verifier_passes = bool(verifier.get("passes_verification", False))
+        circularity = bool(verifier.get("circularity_detected", False))
+        derivation_depth = max(0, int(verifier.get("derivation_depth", 0))) if isinstance(verifier.get("derivation_depth"), int) else 0
+        independent_count = max(0, int(verifier.get("independent_evidence_count", 0))) if isinstance(verifier.get("independent_evidence_count"), int) else 0
+        verifier_errors = verifier.get("errors", []) if isinstance(verifier.get("errors"), list) else []
+        eligible_for_derived = bool(verifier.get("eligible_for_derived_status", False))
 
-        red_team_passes = red_team.get("passes_red_team_check", False)
-        resistance_to_alternatives = min(1.0, max(0.0, float(red_team.get("resistance_to_alternatives", 0.0))))
-        parsimony_score = min(1.0, max(0.0, float(red_team.get("parsimony_score", 0.0))))
-        alternative_hypotheses = red_team.get("alternative_hypotheses", [])
+        red_team_passes = bool(red_team.get("passes_red_team_check", False))
+        resistance_to_alternatives = _safe_float(red_team.get("resistance_to_alternatives", 0.0))
+        parsimony_score = _safe_float(red_team.get("parsimony_score", 0.0))
+        alternative_hypotheses = red_team.get("alternative_hypotheses", []) if isinstance(red_team.get("alternative_hypotheses"), list) else []
 
-        has_prior_rejection = memory.get("has_prior_rejection", False)
+        has_prior_rejection = bool(memory.get("has_prior_rejection", False))
         repetition_warning = memory.get("repetition_warning")
 
         # 2. Calculate Bounded Multidimensional Epistemic Tensor [0.0, 1.0]
-        evidence_strength = float(verifier.get("evidence_strength_score", 1.0 if verifier_passes else max(0.0, 1.0 - (len(verifier_errors) * 0.35))))
-        logical_consistency = float(critic.get("logical_consistency_score", max(0.0, 1.0 - critic_severity)))
-        independence = float(verifier.get("independence_score", min(1.0, independent_count / max(1, derivation_depth))))
-        alt_resistance = float(red_team.get("resistance_to_alternatives", 1.0 if red_team_passes else 0.5)) * float(red_team.get("parsimony_score", 1.0))
-        provenance_integrity = 0.0 if circularity else float(verifier.get("provenance_integrity_score", 1.0))
-
-        evidence_strength = min(1.0, max(0.0, evidence_strength))
-        logical_consistency = min(1.0, max(0.0, logical_consistency))
-        independence = min(1.0, max(0.0, independence))
-        alt_resistance = min(1.0, max(0.0, alt_resistance))
-        provenance_integrity = min(1.0, max(0.0, provenance_integrity))
+        evidence_strength = _safe_float(
+            verifier.get("evidence_strength_score"),
+            default=(1.0 if verifier_passes else max(0.0, 1.0 - (len(verifier_errors) * 0.35)))
+        )
+        logical_consistency = _safe_float(
+            critic.get("logical_consistency_score"),
+            default=max(0.0, 1.0 - critic_severity)
+        )
+        independence = _safe_float(
+            verifier.get("independence_score"),
+            default=min(1.0, independent_count / max(1, derivation_depth))
+        )
+        alt_resistance = _safe_float(
+            resistance_to_alternatives * parsimony_score,
+            default=0.0
+        )
+        provenance_integrity = 0.0 if circularity else _safe_float(
+            verifier.get("provenance_integrity_score"),
+            default=1.0
+        )
 
         epistemic_vector = {
             "evidence_strength": round(evidence_strength, 4),
@@ -105,7 +154,7 @@ class BlindEpistemicJudge:
             (provenance_integrity * 0.20),
             4
         )
-        composite_score = min(1.0, max(0.0, composite_score))
+        composite_score = _safe_float(composite_score)
 
         # 3. Hierarchical Categorical Adjudication Rules
         decision = "REJECT"
