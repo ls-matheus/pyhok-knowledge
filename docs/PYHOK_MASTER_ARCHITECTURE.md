@@ -721,3 +721,63 @@ A validação pode aceitar uma mudança.
 Ainda assim, o Sinapse somente executará aquilo que seu contrato determinístico suporta.
 
 Essa separação constitui uma das propriedades fundamentais de segurança do PyHok.
+
+---
+
+# 27. CONTINUOUS KNOWLEDGE ENGINE (7/0)
+
+O `pyhok-knowledge` opera como um **Continuous Knowledge Engine** de execução ininterrupta (7/0).
+
+```text
+GERAR (Open Thesis)
+  ↓
+SANITIZAR (Zero Generator Authority)
+  ↓
+VINCULAR (Sinapse Variable Binding)
+  ↓
+CRITICAR (Adversarial Critic)
+  ↓
+VERIFICAR (Transitive DAG Provenance)
+  ↓
+RED TEAM (Confounders & Parsimony)
+  ↓
+JULGAR (Blind Epistemic Judge)
+  ↓
+ACEITAR / QUARENTENAR / REJEITAR
+  ↓
+ATUALIZAR MEMÓRIA NEGATIVA
+  ↓
+NOVO CICLO CONTÍNUO
+```
+
+Propriedades fundamentais do motor:
+1. **Sem Intervalos Artificiais**: Opera na velocidade máxima dos recursos disponíveis, mantendo backpressure, rate-limiting e circuit breaker.
+2. **Isolamento de Exceções**: Erros em teses individuais ou revisores não interrompem o motor contínuo.
+3. **Graceful Shutdown & Checkpoint**: Captura segura de `SIGINT`/`SIGTERM` com persistência de estado e recuperação determinística pós-restart.
+4. **Footprint de Memória Bounded**: Coleta e descarte cíclico de temporários garantem RAM constante em execuções de longa duração.
+
+---
+
+# 28. TESES ABERTAS E VINCULAÇÃO PELA SINAPSE
+
+Uma tese no ecossistema PyHok **não é uma resposta pré-fabricada**. Ela representa uma **estrutura de investigação**.
+
+```text
+Espaço Observacional
+        ↓
+Variáveis Abertas (UNBOUND)
+        ↓
+Sinapse Binding (Contextual)
+        ↓
+Tese Instanciada (BOUND)
+        ↓
+Adjudicação Epistêmica
+        ↓
+Conhecimento Sustentado
+```
+
+### Princípios Epistêmicos Centrais:
+- **Tese $\neq$ Resposta**: Hipóteses podem conter variáveis `UNBOUND` cujo significado concreto é instanciado pela Sinapse no contexto operacional.
+- **Binding $\neq$ Evidência**: Instanciar uma variável aberta com um sinal observacional não comprova causalidade nem gera status `DERIVED` sem raízes empíricas independentes.
+- **Honestidade Epistêmica**: Se não houver contexto suficiente, a variável permanece explicitamente `UNBOUND`. Não há preenchimento criativo ou alucinação de evidência.
+- **Blindness Inviolável**: Variáveis abertas não podem transportar formulações dogmáticas ou diagnósticos disfarçados. O Blind Epistemic Judge avalia a estrutura sem privilégio de autoridade ao Generator.

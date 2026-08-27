@@ -18,6 +18,7 @@
     "minimum_confidence_in_proposal": 0.8
   },
   "allowed_proposal_types": [
+    "OPEN_THESIS_CREATE",
     "QUESTION_CREATE",
     "QUESTION_UPDATE",
     "RELATION_CREATE"

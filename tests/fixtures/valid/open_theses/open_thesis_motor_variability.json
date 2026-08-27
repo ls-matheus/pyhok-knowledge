@@ -1,0 +1,37 @@
+{
+  "thesis_id": "thesis_motor_variability_fatigue",
+  "hypothesis_template": "Investigation of observational coupling between motor variability and cognitive fatigue.",
+  "investigation_status": "OPEN",
+  "open_variables": [
+    {
+      "id": "var_motor_predictor",
+      "role": "predictor",
+      "type": "signal",
+      "domain": "motor_control",
+      "status": "UNBOUND",
+      "binding": null,
+      "binding_source": null
+    },
+    {
+      "id": "var_outcome_metric",
+      "role": "outcome",
+      "type": "metric",
+      "domain": "cognitive_state",
+      "status": "UNBOUND",
+      "binding": null,
+      "binding_source": null
+    }
+  ],
+  "relational_hypotheses": [
+    {
+      "source_var": "var_motor_predictor",
+      "target_var": "var_outcome_metric",
+      "relation_type": "CORRELATED"
+    }
+  ],
+  "conditions": [
+    "controlling for sensor noise"
+  ],
+  "required_signals": [],
+  "resolution": "DEFERRED_TO_SYNAPSE"
+}

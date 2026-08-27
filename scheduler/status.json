@@ -1,23 +1,23 @@
 {
   "status": "BLOCKED",
   "current_cycle_id": null,
-  "last_run": "2026-08-26T15:38:54.514048-03:00",
+  "last_run": null,
   "last_success": null,
-  "last_failure": "2026-08-26T15:38:54.517697-03:00",
-  "last_error": "confidence 0.65 < 0.8",
-  "last_stop_reason": "circuit_breaker_open: 3 consecutive failures: confidence 0.65 < 0.8",
+  "last_failure": null,
+  "last_error": null,
+  "last_stop_reason": "PREFLIGHT_BLOCKED: dirty_workspace_unknown_files: docs/PYHOK_MASTER_ARCHITECTURE.md, evolution/epistemic/critic.py, evolution/epistemic/judge.py, evolution/epistemic/quarantine.py, evolution/epistemic/review_chamber.py, evolution/epistemic/verifier.py, evolution/evolution-policy.json, evolution/ledger.py, scheduler/orchestrator.py, scheduler/quality_gate.py, schemas/v2/agent-proposal.schema.json, schemas/v2/question.schema.json, tests/unit/test_scheduler_and_orchestrator.py, validators/validate_proposal.py, evolution/continuous_discovery_gate.py, evolution/discovery/, evolution/epistemic/synapse.py, evolution/graph/, scheduler/checkpoint.json, scheduler/continuous_engine.py, schemas/v2/contradiction.schema.json, schemas/v2/discovery-opportunity.schema.json, schemas/v2/open-thesis.schema.json, tests/fixtures/invalid/open_theses/, tests/fixtures/valid/open_theses/, tests/unit/test_continuous_discovery_engine.py, tests/unit/test_continuous_engine.py, tests/unit/test_open_thesis_and_synapse.py",
   "processed_proposals": [],
   "last_opportunity_id": null,
   "last_proposal_id": null,
   "last_question_id": null,
   "last_branch": null,
   "last_pr_url": null,
-  "consecutive_failures": 3,
+  "consecutive_failures": 0,
   "circuit_breaker": {
-    "is_open": true,
+    "is_open": false,
     "max_consecutive_failures": 3,
-    "tripped_at": "2026-08-26T15:38:54.517697-03:00",
-    "trip_reason": "3 consecutive failures: confidence 0.65 < 0.8"
+    "tripped_at": null,
+    "trip_reason": null
   },
   "audit_trail": {
     "main_before_sha": null,
@@ -27,10 +27,11 @@
     "state_after_hash": null
   },
   "stats": {
-    "total_runs": 3,
+    "total_runs": 0,
     "successful_runs": 0,
-    "failed_runs": 3,
-    "skipped_runs": 1,
-    "blocked_runs": 1
+    "failed_runs": 0,
+    "skipped_runs": 0,
+    "blocked_runs": 3,
+    "circuit_breaker_trips": 0
   }
 }

@@ -1,0 +1,213 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pyhok.org/schemas/v2/open-thesis.schema.json",
+  "title": "PyHokOpenThesisEntity",
+  "description": "Formal investigative structure representing open observational hypotheses with unbound/candidate variables evaluated and bound by the Sinapse engine.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "thesis_id",
+    "hypothesis_template",
+    "investigation_status",
+    "open_variables",
+    "relational_hypotheses",
+    "resolution"
+  ],
+  "properties": {
+    "thesis_id": {
+      "type": "string",
+      "pattern": "^thesis_[a-z0-9_]+$"
+    },
+    "hypothesis_template": {
+      "type": "string",
+      "minLength": 1
+    },
+    "investigation_status": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "PARTIALLY_BOUND",
+        "BOUND",
+        "UNDER_TEST",
+        "SUPPORTED",
+        "WEAKENED",
+        "REJECTED",
+        "QUARANTINED",
+        "SUPERSEDED"
+      ]
+    },
+    "open_variables": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "role",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "variable_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "predictor",
+              "outcome",
+              "confounder",
+              "moderator",
+              "condition",
+              "unspecified"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "signal",
+              "metric",
+              "state",
+              "context",
+              "unspecified"
+            ]
+          },
+          "domain": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "constraints": {
+            "type": "object"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "UNBOUND",
+              "CANDIDATE",
+              "BOUND",
+              "INVALID"
+            ]
+          },
+          "candidate_values": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "value": {
+            "type": ["string", "number", "null"]
+          },
+          "binding": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "binding_source": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "SYNAPSE",
+              "OBSERVATION_TELEMETRY",
+              "DATASET_CANONICAL",
+              "EXTERNAL_EVALUATION",
+              null
+            ]
+          },
+          "binding_provenance": {
+            "type": "object"
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "required_evidence": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "bound_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "relational_hypotheses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source_var",
+          "target_var",
+          "relation_type"
+        ],
+        "properties": {
+          "source_var": {
+            "type": "string"
+          },
+          "target_var": {
+            "type": "string"
+          },
+          "relation_type": {
+            "type": "string",
+            "enum": [
+              "CORRELATED",
+              "COVARIATE",
+              "MODULATING",
+              "INVERSE",
+              "HYPOTHESIZED_LINK"
+            ]
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "conditions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "required_signals": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "opportunity_ref": {
+      "type": "string"
+    },
+    "contradiction_ref": {
+      "type": "string"
+    },
+    "resolution": {
+      "type": "string",
+      "enum": [
+        "DEFERRED_TO_SYNAPSE",
+        "BOUND_FOR_EVALUATION",
+        "RESOLVED",
+        "ABANDONED"
+      ]
+    },
+    "provenance": {
+      "type": "object"
+    }
+  }
+}

@@ -58,7 +58,7 @@ def record_quarantined_claim(
     entry = {
         "cycle_id": cycle_id or q_data.get("provenance", {}).get("cycle_id", "cycle_unknown"),
         "proposal_id": prop.get("proposal_id", q_data.get("id", "prop_unknown")),
-        "hypothesis": q_data.get("hypothesis", ""),
+        "hypothesis": q_data.get("hypothesis", "") or q_data.get("hypothesis_template", ""),
         "required_signals": q_data.get("required_signals", []),
         "decision": ruling.get("decision", "QUARANTINE"),
         "quarantine_reason": ruling.get("quarantine_reason"),
@@ -140,7 +140,7 @@ def check_prior_rejections(
         }
 
     q_data = proposal.get("question") if isinstance(proposal.get("question"), dict) else proposal
-    curr_hypo = str(q_data.get("hypothesis", "") or "")
+    curr_hypo = str(q_data.get("hypothesis", "") or q_data.get("hypothesis_template", "") or "")
     curr_tokens = _normalize_tokens(curr_hypo)
     curr_signals = set(q_data.get("required_signals", []) if isinstance(q_data.get("required_signals"), list) else [])
     curr_polarity = _extract_polarity(curr_hypo)

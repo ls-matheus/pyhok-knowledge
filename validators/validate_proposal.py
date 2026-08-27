@@ -349,7 +349,45 @@ def validate_question_create(
 
     return errors
 
+
+def validate_open_thesis_create(
+    proposal,
+    mission,
+    policy,
+    known_signals,
+):
+    errors = []
+    thesis = proposal.get("thesis") or proposal.get("question")
+    if not isinstance(thesis, dict):
+        return ["Open thesis payload is missing."]
+
+    thesis_id = thesis.get("thesis_id") or thesis.get("id")
+    if not thesis_id:
+        errors.append("Thesis id is missing.")
+
+    hypo = thesis.get("hypothesis_template") or thesis.get("hypothesis")
+    if not hypo:
+        errors.append("Thesis hypothesis_template is missing.")
+    elif contains_forbidden_language(hypo):
+        errors.append(f"Forbidden diagnostic terms detected in thesis hypothesis: {contains_forbidden_language(hypo)}")
+
+    open_vars = thesis.get("open_variables", [])
+    if not isinstance(open_vars, list) or len(open_vars) == 0:
+        errors.append("Open thesis must declare at least one open variable.")
+    else:
+        for var in open_vars:
+            if not isinstance(var, dict) or not var.get("id") or not var.get("role"):
+                errors.append("Each open variable must have 'id' and 'role'.")
+
+    return errors
+
+
 def main():
+    if not PROPOSAL_FILE.exists():
+        print("VALIDATION: REJECTED")
+        print("- proposal.json not found")
+        return 1
+
     proposal_doc = load_json(PROPOSAL_FILE)
 
     if proposal_doc.get("status") == "NO_PROPOSAL":
@@ -408,7 +446,7 @@ def main():
         )
 
     # ------------------------------------------------------------
-    # QUESTION_CREATE
+    # QUESTION_CREATE & OPEN_THESIS_CREATE
     # ------------------------------------------------------------
 
     if operation == "QUESTION_CREATE":
@@ -420,6 +458,15 @@ def main():
                 methods=methods,
                 known_signals=known_signals,
                 known_questions=known_questions,
+            )
+        )
+    elif operation == "OPEN_THESIS_CREATE":
+        errors.extend(
+            validate_open_thesis_create(
+                proposal=proposal,
+                mission=mission,
+                policy=policy,
+                known_signals=known_signals,
             )
         )
 
@@ -435,6 +482,8 @@ def main():
 
         return 1
 
+    target_id = proposal.get("question", {}).get("id") or proposal.get("thesis", {}).get("thesis_id") or proposal.get("proposal_id")
+
     print("VALIDATION: APPROVED")
     print(
         "Proposal:",
@@ -449,8 +498,8 @@ def main():
         proposal.get("domain"),
     )
     print(
-        "Question:",
-        proposal["question"]["id"],
+        "Target Entity:",
+        target_id,
     )
 
     return 0

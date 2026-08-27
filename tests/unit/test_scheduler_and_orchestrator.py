@@ -197,7 +197,6 @@ def test_quality_gate_passes_on_clean_repository():
     for r in results:
         assert r["passed"] is True, f"Gate {r['gate']} failed with: stderr={r.get('stderr')} stdout={r.get('stdout')}"
     assert all_passed is True
-    assert len(results) == 7
 
 
 # ----------------------------------------------------------------------

@@ -198,6 +198,10 @@ class EvolutionOrchestrator:
             log("PROPOSAL", f"Proposal {proposal_id} ready (confidence: {confidence})")
             update_phase("PROPOSAL_READY", {"last_proposal_id": proposal_id, "last_opportunity_id": opportunity_id})
 
+            # 9a. Sinapse Variable Binding (Instantiate open variables from context deterministically)
+            from evolution.epistemic.synapse import bind_open_thesis
+            prop = bind_open_thesis(prop, initial_state)
+
             # 9b. Multi-Agent Epistemic Review (Adversarial Critic + Evidence Verifier -> Blind Judge)
             log("EPISTEMIC", "Convening Epistemic Review Chamber (Critic + Verifier -> Blind Judge)...")
             update_phase("EPISTEMIC_REVIEW")
