@@ -1,11 +1,11 @@
 {
-  "status": "BLOCKED",
+  "status": "SKIPPED",
   "current_cycle_id": null,
   "last_run": null,
   "last_success": null,
   "last_failure": null,
   "last_error": null,
-  "last_stop_reason": "PREFLIGHT_BLOCKED: dirty_workspace_unknown_files: scheduler/continuous_engine.py, tests/unit/test_baseline_and_shadow_report.py",
+  "last_stop_reason": "window_closed: outside_scheduled_window",
   "processed_proposals": [],
   "last_opportunity_id": null,
   "last_proposal_id": null,
@@ -30,7 +30,7 @@
     "total_runs": 0,
     "successful_runs": 0,
     "failed_runs": 0,
-    "skipped_runs": 0,
+    "skipped_runs": 5,
     "blocked_runs": 8,
     "circuit_breaker_trips": 0
   }
