@@ -55,6 +55,7 @@ def run_subcommand(cmd: list[str], cwd: Path = ROOT) -> tuple[int, str, str]:
 LEDGER_FILE = ROOT / "evolution/ledger.jsonl"
 MANIFESTS_DIR = ROOT / "evolution/manifests"
 EVALUATIONS_FILE = ROOT / "evolution/post_evaluations.jsonl"
+DATA_DIR = ROOT / "data"
 
 
 class EvolutionOrchestrator:
@@ -87,6 +88,10 @@ class EvolutionOrchestrator:
         if not self.policy_path.exists():
             return {}
         return json.loads(self.policy_path.read_text(encoding="utf-8"))
+
+    @staticmethod
+    def load_knowledge_state(data_dir: Path = DATA_DIR) -> dict[str, Any]:
+        return load_knowledge_state(data_dir)
 
     def execute_cycle(self) -> dict[str, Any]:
         log("INIT", "Starting autonomous evolution cycle...")

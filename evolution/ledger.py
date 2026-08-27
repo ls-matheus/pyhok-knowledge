@@ -77,7 +77,51 @@ def load_knowledge_state(data_dir: Path = DATA_DIR) -> dict[str, Any]:
             except Exception:
                 pass
 
+    theses_dir = data_dir / "theses"
+    if theses_dir.exists():
+        for path in sorted(theses_dir.glob("*.json")):
+            try:
+                extracted_state["open_theses"].append(json.loads(path.read_text(encoding="utf-8")))
+            except Exception:
+                pass
+
     return extracted_state
+
+
+def persist_knowledge_entity(
+    entity_type: str,
+    entity_dict: dict[str, Any],
+    data_dir: Path = DATA_DIR
+) -> Path:
+    """
+    Atomically writes a knowledge entity (signal, question, relation, thesis) to its canonical directory.
+    Uses tempfile + rename for crash resistance and transactionality.
+    """
+    if entity_type == "signal":
+        target_dir = data_dir / "signals"
+        entity_id = entity_dict.get("id") or entity_dict.get("signal_id")
+    elif entity_type == "question":
+        target_dir = data_dir / "questions"
+        entity_id = entity_dict.get("id") or entity_dict.get("question_id")
+    elif entity_type == "relation":
+        target_dir = data_dir / "relations"
+        entity_id = entity_dict.get("id") or entity_dict.get("relation_id")
+    elif entity_type in ("thesis", "open_thesis"):
+        target_dir = data_dir / "theses"
+        entity_id = entity_dict.get("thesis_id") or entity_dict.get("id")
+    else:
+        target_dir = data_dir / f"{entity_type}s"
+        entity_id = entity_dict.get("id")
+
+    if not entity_id:
+        raise ValueError(f"Cannot persist entity of type '{entity_type}' without valid ID.")
+
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target_file = target_dir / f"{entity_id}.json"
+    tmp_file = target_file.with_suffix(".tmp")
+    tmp_file.write_text(json.dumps(entity_dict, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    tmp_file.replace(target_file)
+    return target_file
 
 
 def hash_knowledge_state(state_data: dict[str, Any] | None = None, data_dir: Path = DATA_DIR) -> str:
