@@ -20,8 +20,19 @@ if str(ROOT) not in sys.path:
 CHECKPOINT_FILE = ROOT / "scheduler/checkpoint.json"
 STATUS_FILE = ROOT / "scheduler/status.json"
 THESES_OUTPUT_FILE = ROOT / "generator/output/theses.json"
+THESES_VALIDATED_FILE = ROOT / "generator/output/theses_validated.json"
+THESES_REJECTED_FILE = ROOT / "generator/output/theses_rejected.json"
+THESES_QUARANTINED_FILE = ROOT / "generator/output/theses_quarantined.json"
+
 THESES_STREAM_FILE = ROOT / "generator/output/theses_stream.jsonl"
+VALIDATED_STREAM_FILE = ROOT / "generator/output/validated_stream.jsonl"
+REJECTED_STREAM_FILE = ROOT / "generator/output/rejected_stream.jsonl"
+
 THESES_OUTPUT_DIR = ROOT / "generator/output/theses"
+THESES_VALIDATED_DIR = ROOT / "generator/output/theses/validated"
+THESES_REJECTED_DIR = ROOT / "generator/output/theses/rejected"
+THESES_QUARANTINED_DIR = ROOT / "generator/output/theses/quarantined"
+
 PROPOSAL_OUTPUT_FILE = ROOT / "generator/output/proposal.json"
 
 from scheduler.orchestrator import EvolutionOrchestrator, log
@@ -34,29 +45,113 @@ from evolution.epistemic.quarantine import REJECTED_CLAIMS_FILE, record_quaranti
 from evolution.ledger import load_knowledge_state, persist_knowledge_entity, append_ledger_event
 
 
+def _append_to_json_list_file(file_path: Path, item: dict[str, Any], max_items: int = 500) -> None:
+    """Helper to atomically update a categorized JSON list file."""
+    existing = []
+    if file_path.exists():
+        try:
+            data = json.loads(file_path.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                existing = data.get("theses", [])
+            elif isinstance(data, list):
+                existing = data
+        except Exception:
+            existing = []
+
+    item_id = item.get("thesis_id")
+    if item_id:
+        existing = [x for x in existing if x.get("thesis_id") != item_id]
+    existing.append(item)
+    if len(existing) > max_items:
+        existing = existing[-max_items:]
+
+    consolidated = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "total": len(existing),
+        "theses": existing,
+    }
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = file_path.with_suffix(".tmp")
+    tmp_path.write_text(json.dumps(consolidated, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    tmp_path.replace(file_path)
+
+
 def record_thesis_output(
     thesis_record: dict[str, Any],
     output_file: Path = THESES_OUTPUT_FILE,
+    validated_file: Path = THESES_VALIDATED_FILE,
+    rejected_file: Path = THESES_REJECTED_FILE,
+    quarantined_file: Path = THESES_QUARANTINED_FILE,
     stream_file: Path = THESES_STREAM_FILE,
+    validated_stream_file: Path = VALIDATED_STREAM_FILE,
+    rejected_stream_file: Path = REJECTED_STREAM_FILE,
     output_dir: Path = THESES_OUTPUT_DIR,
+    validated_dir: Path = THESES_VALIDATED_DIR,
+    rejected_dir: Path = THESES_REJECTED_DIR,
+    quarantined_dir: Path = THESES_QUARANTINED_DIR,
     proposal_file: Path = PROPOSAL_OUTPUT_FILE,
 ) -> None:
     """
-    Persists live thesis output for visibility in generator/output/theses.json,
-    generator/output/theses/<id>.json, and generator/output/theses_stream.jsonl.
+    Persists live thesis output categorized into validated, rejected, and quarantined.
+    Saves:
+      - generator/output/theses/validated/<id>.json
+      - generator/output/theses/rejected/<id>.json
+      - generator/output/theses/quarantined/<id>.json
+      - generator/output/theses_validated.json
+      - generator/output/theses_rejected.json
+      - generator/output/theses_quarantined.json
+      - generator/output/theses.json (master consolidated index with counts and categorized lists)
+      - generator/output/theses_stream.jsonl
+      - generator/output/validated_stream.jsonl
+      - generator/output/rejected_stream.jsonl
     """
     try:
-        output_dir.mkdir(parents=True, exist_ok=True)
         th_id = thesis_record.get("thesis_id", f"thesis_{uuid.uuid4().hex[:8]}")
-        indiv_file = output_dir / f"{th_id}.json"
+        decision = str(thesis_record.get("decision", "")).upper()
+
+        # 1. Determine target directory and streams based on decision
+        if decision == "ACCEPT":
+            target_dir = validated_dir
+            target_stream = validated_stream_file
+            target_list_file = validated_file
+        elif decision == "QUARANTINE":
+            target_dir = quarantined_dir
+            target_stream = None
+            target_list_file = quarantined_file
+        else:
+            target_dir = rejected_dir
+            target_stream = rejected_stream_file
+            target_list_file = rejected_file
+
+        target_dir.mkdir(parents=True, exist_ok=True)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Write categorized individual JSON
+        indiv_file = target_dir / f"{th_id}.json"
         tmp_indiv = indiv_file.with_suffix(".tmp")
         tmp_indiv.write_text(json.dumps(thesis_record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         tmp_indiv.replace(indiv_file)
 
+        # Also write to root theses dir for flat access
+        root_indiv = output_dir / f"{th_id}.json"
+        tmp_root_indiv = root_indiv.with_suffix(".tmp")
+        tmp_root_indiv.write_text(json.dumps(thesis_record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        tmp_root_indiv.replace(root_indiv)
+
+        # 2. Append to streaming JSONL logs
         stream_file.parent.mkdir(parents=True, exist_ok=True)
         with open(stream_file, "a", encoding="utf-8") as f:
             f.write(json.dumps(thesis_record, ensure_ascii=False) + "\n")
 
+        if target_stream:
+            target_stream.parent.mkdir(parents=True, exist_ok=True)
+            with open(target_stream, "a", encoding="utf-8") as f:
+                f.write(json.dumps(thesis_record, ensure_ascii=False) + "\n")
+
+        # 3. Update categorized list file
+        _append_to_json_list_file(target_list_file, thesis_record)
+
+        # 4. Update master consolidated theses.json
         existing_theses = []
         if output_file.exists():
             try:
@@ -68,19 +163,33 @@ def record_thesis_output(
             except Exception:
                 existing_theses = []
 
+        existing_theses = [x for x in existing_theses if x.get("thesis_id") != th_id]
         existing_theses.append(thesis_record)
         if len(existing_theses) > 500:
             existing_theses = existing_theses[-500:]
 
+        validated_list = [t for t in existing_theses if str(t.get("decision", "")).upper() == "ACCEPT"]
+        rejected_list = [t for t in existing_theses if str(t.get("decision", "")).upper() not in ("ACCEPT", "QUARANTINE")]
+        quarantined_list = [t for t in existing_theses if str(t.get("decision", "")).upper() == "QUARANTINE"]
+
         consolidated = {
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "total_theses": len(existing_theses),
-            "theses": existing_theses
+            "counts": {
+                "validated": len(validated_list),
+                "rejected": len(rejected_list),
+                "quarantined": len(quarantined_list),
+            },
+            "validated_theses": validated_list,
+            "rejected_theses": rejected_list,
+            "quarantined_theses": quarantined_list,
+            "theses": existing_theses,
         }
         tmp_out = output_file.with_suffix(".tmp")
         tmp_out.write_text(json.dumps(consolidated, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         tmp_out.replace(output_file)
 
+        # 5. Write proposal.json for validator compatibility
         proposal_payload = {
             "status": "PROPOSAL_READY",
             "proposal": {
@@ -89,8 +198,8 @@ def record_thesis_output(
                 "opportunity_id": thesis_record.get("opportunity_id"),
                 "domain": thesis_record.get("target_domain", "general"),
                 "thesis": thesis_record,
-                "confidence": thesis_record.get("review_result", {}).get("epistemic_score", 0.85)
-            }
+                "confidence": thesis_record.get("review_result", {}).get("epistemic_score", 0.85),
+            },
         }
         tmp_prop = proposal_file.with_suffix(".tmp")
         tmp_prop.write_text(json.dumps(proposal_payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -381,6 +490,10 @@ class ContinuousKnowledgeEngine:
                 self.discovery_engine.register_historical_proposal(thesis)
 
                 # Persist to output JSON for real-time visibility
+                judge_ruling = review_result.get("judge_ruling", {})
+                rejection_reason = judge_ruling.get("quarantine_reason") if decision != "ACCEPT" else None
+                epistemic_status = judge_ruling.get("assigned_epistemic_status", "HYPOTHESIS" if decision == "ACCEPT" else "SPECULATION")
+
                 thesis_record = {
                     "thesis_id": thesis.get("thesis_id"),
                     "cycle_id": cycle_id,
@@ -399,11 +512,16 @@ class ContinuousKnowledgeEngine:
                     },
                     "review_result": {
                         "decision": decision,
-                        "epistemic_score": review_result.get("epistemic_score", 0.0),
+                        "epistemic_score": review_result.get("epistemic_score", judge_ruling.get("epistemic_score", 0.0)),
+                        "quarantine_reason": rejection_reason,
+                        "assigned_epistemic_status": epistemic_status,
                         "critic": review_result.get("critic_review", {}),
                         "verifier": review_result.get("verifier_review", {}),
+                        "red_team": review_result.get("red_team_review", {}),
                     },
                     "decision": decision,
+                    "rejection_reason": rejection_reason,
+                    "epistemic_status": epistemic_status,
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 }
                 record_thesis_output(thesis_record)
@@ -545,17 +663,36 @@ class ContinuousKnowledgeEngine:
             try:
                 data = json.loads(THESES_OUTPUT_FILE.read_text(encoding="utf-8"))
                 theses_list = data.get("theses", [])
-                if theses_list:
-                    print("────────────────────────────")
-                    print(f"LATEST GENERATED THESES ({len(theses_list)} total):")
-                    for th in theses_list[-5:]:
+                counts = data.get("counts", {})
+                v_count = counts.get("validated", len([t for t in theses_list if str(t.get("decision", "")).upper() == "ACCEPT"]))
+                r_count = counts.get("rejected", len([t for t in theses_list if str(t.get("decision", "")).upper() not in ("ACCEPT", "QUARANTINE")]))
+                q_count = counts.get("quarantined", len([t for t in theses_list if str(t.get("decision", "")).upper() == "QUARANTINE"]))
+
+                print("────────────────────────────")
+                print(f"THESES REPOSITORY SUMMARY ({len(theses_list)} total | {v_count} validated | {r_count} rejected | {q_count} quarantined):")
+
+                v_theses = data.get("validated_theses", [t for t in theses_list if str(t.get("decision", "")).upper() == "ACCEPT"])
+                if v_theses:
+                    print("\n  [✓ VALIDATED / ACCEPTED THESES]")
+                    for th in v_theses[-3:]:
                         th_id = th.get("thesis_id", "unknown")
                         opp_t = th.get("opportunity_type", "GAP")
-                        dec = th.get("decision", "REJECT")
-                        tmpl = th.get("hypothesis_template", "")[:65]
-                        print(f"  • [{th_id}] {opp_t} ({dec})")
-                        print(f"    Template: {tmpl}...")
-                    print("")
+                        score = th.get("review_result", {}).get("epistemic_score", 1.0)
+                        tmpl = th.get("hypothesis_template", "")[:60]
+                        print(f"    • [{th_id}] {opp_t} (epistemic_score={score})")
+                        print(f"      Template: {tmpl}...")
+
+                r_theses = data.get("rejected_theses", [t for t in theses_list if str(t.get("decision", "")).upper() not in ("ACCEPT", "QUARANTINE")])
+                if r_theses:
+                    print("\n  [✗ REJECTED THESES (with forensic reason)]")
+                    for th in r_theses[-3:]:
+                        th_id = th.get("thesis_id", "unknown")
+                        opp_t = th.get("opportunity_type", "GAP")
+                        reason = th.get("rejection_reason") or "REJECTED"
+                        tmpl = th.get("hypothesis_template", "")[:60]
+                        print(f"    • [{th_id}] {opp_t} (reason: {reason})")
+                        print(f"      Template: {tmpl}...")
+                print("")
             except Exception:
                 pass
 
@@ -565,6 +702,9 @@ def main() -> int:
     parser.add_argument("--once", action="store_true", help="Execute exactly one cycle and exit deterministically")
     parser.add_argument("--status", action="store_true", help="Print formatted observability status dashboard")
     parser.add_argument("--show-theses", action="store_true", help="Print all generated theses formatted as JSON")
+    parser.add_argument("--show-validated", action="store_true", help="Print only validated / accepted theses formatted as JSON")
+    parser.add_argument("--show-rejected", action="store_true", help="Print only rejected theses formatted as JSON")
+    parser.add_argument("--show-quarantined", action="store_true", help="Print only quarantined theses formatted as JSON")
     parser.add_argument("--resume", action="store_true", help="Explicitly resume state from checkpoint.json")
     parser.add_argument("--max-cycles", type=int, default=None, help="Maximum number of cycles to execute before stopping")
     parser.add_argument("--cycles", type=int, default=None, help="Alias for max-cycles")
@@ -579,6 +719,35 @@ def main() -> int:
             print(THESES_OUTPUT_FILE.read_text(encoding="utf-8"))
         else:
             print(json.dumps({"generated_at": datetime.now(timezone.utc).isoformat(), "total_theses": 0, "theses": []}, indent=2))
+        return 0
+
+    if args.show_validated:
+        if THESES_VALIDATED_FILE.exists():
+            print(THESES_VALIDATED_FILE.read_text(encoding="utf-8"))
+        elif THESES_OUTPUT_FILE.exists():
+            data = json.loads(THESES_OUTPUT_FILE.read_text(encoding="utf-8"))
+            val = data.get("validated_theses", [t for t in data.get("theses", []) if str(t.get("decision", "")).upper() == "ACCEPT"])
+            print(json.dumps({"generated_at": datetime.now(timezone.utc).isoformat(), "total": len(val), "theses": val}, indent=2))
+        else:
+            print(json.dumps({"generated_at": datetime.now(timezone.utc).isoformat(), "total": 0, "theses": []}, indent=2))
+        return 0
+
+    if args.show_rejected:
+        if THESES_REJECTED_FILE.exists():
+            print(THESES_REJECTED_FILE.read_text(encoding="utf-8"))
+        elif THESES_OUTPUT_FILE.exists():
+            data = json.loads(THESES_OUTPUT_FILE.read_text(encoding="utf-8"))
+            rej = data.get("rejected_theses", [t for t in data.get("theses", []) if str(t.get("decision", "")).upper() not in ("ACCEPT", "QUARANTINE")])
+            print(json.dumps({"generated_at": datetime.now(timezone.utc).isoformat(), "total": len(rej), "theses": rej}, indent=2))
+        else:
+            print(json.dumps({"generated_at": datetime.now(timezone.utc).isoformat(), "total": 0, "theses": []}, indent=2))
+        return 0
+
+    if args.show_quarantined:
+        if THESES_QUARANTINED_FILE.exists():
+            print(THESES_QUARANTINED_FILE.read_text(encoding="utf-8"))
+        else:
+            print(json.dumps({"generated_at": datetime.now(timezone.utc).isoformat(), "total": 0, "theses": []}, indent=2))
         return 0
 
     max_c = args.max_cycles or args.cycles
