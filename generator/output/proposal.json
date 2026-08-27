@@ -1,18 +1,18 @@
 {
   "status": "PROPOSAL_READY",
   "proposal": {
-    "proposal_id": "prop_thesis_gap_8a45b7ac",
+    "proposal_id": "prop_thesis_gap_5421e52d",
     "operation": "OPEN_THESIS_CREATE",
     "opportunity_id": "opp_gap_sig_stream_3_c399fc",
     "domain": "domain_0",
     "thesis": {
-      "thesis_id": "thesis_gap_8a45b7ac",
-      "cycle_id": "cycle_20260827_232428_214214_811d29",
+      "thesis_id": "thesis_gap_5421e52d",
+      "cycle_id": "cycle_20260827_232624_245189_3d7be4",
       "opportunity_type": "GAP",
       "opportunity_id": "opp_gap_sig_stream_3_c399fc",
       "target_domain": "domain_0",
       "description": "Observational gap: Signal sig_stream_3 in domain domain_0 has zero investigational theses.",
-      "hypothesis_template": "Response threshold and operational latency bounds for signal sig_stream_3.",
+      "hypothesis_template": "Observational variance and statistical distribution dynamics of signal sig_stream_3.",
       "investigation_status": "OPEN",
       "open_variables": [
         {
@@ -69,7 +69,7 @@
             "value": "sig_stream_0",
             "binding": "sig_stream_0",
             "binding_source": "SYNAPSE",
-            "bound_at": "2026-08-27T23:24:32.499777+00:00"
+            "bound_at": "2026-08-27T23:26:28.651854+00:00"
           },
           {
             "id": "var_functional_outcome",
@@ -83,7 +83,7 @@
             "value": "sig_stream_0",
             "binding": "sig_stream_0",
             "binding_source": "SYNAPSE",
-            "bound_at": "2026-08-27T23:24:32.499784+00:00"
+            "bound_at": "2026-08-27T23:26:28.651862+00:00"
           }
         ],
         "unbound_variables": []
@@ -139,7 +139,7 @@
       "decision": "REJECT",
       "rejection_reason": "CRITIC_SEVERITY_TOO_HIGH (0.6)",
       "epistemic_status": "SPECULATION",
-      "timestamp": "2026-08-27T23:24:32.501106+00:00"
+      "timestamp": "2026-08-27T23:26:28.652988+00:00"
     },
     "confidence": 0.8
   }
