@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "generator/output"
 STATUS = ROOT / "scheduler/status.json"
+CHECKPOINT = ROOT / "scheduler/checkpoint.json"
 THESES = OUTPUT / "theses.json"
 REPORT = ROOT / "analysis/run_summary.md"
 ARTIFACTS = ROOT / "analysis/artifacts"
@@ -155,6 +156,9 @@ def write_thesis_artifacts(theses: list[dict], run_id: str, generated_at: str) -
 
 def main() -> int:
     status = read_json(STATUS)
+    checkpoint = read_json(CHECKPOINT)
+    if checkpoint.get("saved_at") and checkpoint.get("saved_at") != status.get("last_run"):
+        status = {**status, "status": checkpoint.get("engine_status", status.get("status")), "last_error": None, "stats": {**status.get("stats", {}), "total_runs": checkpoint.get("total_cycles", status.get("stats", {}).get("total_runs", 0)), "failed_runs": checkpoint.get("total_errors", status.get("stats", {}).get("failed_runs", 0))}}
     theses_data = read_json(THESES)
     theses = theses_from(theses_data)
     total, accepted, rejected, quarantined = count_theses(theses_data)
