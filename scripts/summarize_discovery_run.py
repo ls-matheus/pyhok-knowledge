@@ -73,17 +73,45 @@ def thesis_artifact(thesis: dict, run_id: str, generated_at: str) -> tuple[str, 
     source_signals = thesis.get("required_signals", []) or thesis.get("available_signals", [])
     if not isinstance(source_signals, list):
         source_signals = []
+    variables = thesis.get("open_variables", [])
+    if not isinstance(variables, list):
+        variables = []
+    variable_names = [str(v.get("name") or v.get("variable_id") or v.get("id")) for v in variables if isinstance(v, dict)]
+    variable_questions = [
+        f"O que significa a variável '{name}' neste caso?"
+        for name in variable_names
+    ]
+    relational = thesis.get("relational_hypotheses", [])
+    if isinstance(relational, list):
+        variable_questions.extend(
+            str(item.get("description")) for item in relational
+            if isinstance(item, dict) and item.get("description")
+        )
+    if not variable_questions:
+        variable_questions = [
+            "Este sinal aparece junto com o comportamento observado?",
+            "Há evidência suficiente para dizer que isso é mais do que uma coincidência?",
+            "O que poderia explicar o mesmo comportamento de outra forma?",
+        ]
     review = thesis.get("review_result", {})
     review = review if isinstance(review, dict) else {}
+    learned = decision == "ACCEPT"
+    rejection_reason = thesis.get("rejection_reason") or review.get("quarantine_reason")
     artifact = {
         "artifact_type": "discovery_thesis_summary",
-        "artifact_version": "1.0",
+        "artifact_version": "1.1",
         "thesis_id": thesis_id,
         "run_id": run_id or None,
         "learned_at": thesis.get("timestamp") or generated_at,
         "decision": decision,
+        "learned": learned,
+        "learning_outcome": "registered_as_investigational_knowledge" if learned else "not_learned",
         "short_title": title[:120],
         "what_was_investigated": title,
+        "thesis_in_plain_portuguese": f"Será que {title.rstrip('.')}?",
+        "variables": variables,
+        "variable_names": variable_names,
+        "questions_based_on_variables": variable_questions,
         "source_signals": source_signals,
         "source_files": signal_files(source_signals),
         "source_opportunity": thesis.get("opportunity_id"),
@@ -94,25 +122,13 @@ def thesis_artifact(thesis: dict, run_id: str, generated_at: str) -> tuple[str, 
         "coverage_gain": review.get("coverage_gain"),
         "evidence": review.get("verifier", {}).get("evidence_roots", []) if isinstance(review.get("verifier"), dict) else [],
         "evidence_strength": review.get("verifier", {}).get("evidence_strength_score") if isinstance(review.get("verifier"), dict) else None,
-        "rejection_reason": thesis.get("rejection_reason") or review.get("quarantine_reason"),
-        "learned": decision == "ACCEPT",
-        "learning_outcome": ("registered_as_investigational_knowledge" if decision == "ACCEPT" else "not_learned"),
-        "what_was_learned": ("A hipótese foi registrada como conhecimento investigável; ainda não foi comprovada." if decision == "ACCEPT" else "Nenhum novo conhecimento foi incorporado ao estado ativo."),
-        "why_not_learned": (None if decision == "ACCEPT" else thesis.get("rejection_reason") or review.get("quarantine_reason") or "A revisão não autorizou a incorporação."),
-        "learned_summary": ("Hipótese admitida e registrada para investigação futura; isso não significa que seja verdadeira." if decision == "ACCEPT" else "A execução não incorporou esta hipótese ao conhecimento ativo; a razão registrada deve orientar a próxima exploração."),
+        "rejection_reason": rejection_reason,
+        "what_was_learned": "A hipótese foi registrada como conhecimento investigável, mas ainda não foi comprovada." if learned else "Nada novo foi incorporado ao conhecimento ativo.",
+        "why_not_learned": None if learned else rejection_reason or "A revisão não autorizou a incorporação.",
+        "learned_summary": "O sistema guardou esta hipótese para investigação futura; isso não significa que ela seja verdadeira." if learned else "O sistema não guardou esta hipótese como conhecimento ativo.",
     }
     filename = f"{short_slug(title, 'thesis')}-{short_slug(thesis_id, 'id')}.md"
-    body = [
-        f"# {artifact['short_title']}", "",
-        f"- **Decisão:** `{decision}`", f"- **Quando:** `{artifact['learned_at']}`", f"- **ID da tese:** `{thesis_id}`", "",
-        "## Em linguagem simples", "", artifact["learned_summary"], "",
-        "## O que foi investigado", "", title, "",
-        "## De onde veio", "", f"- Sinais: {', '.join(f'`{s}`' for s in source_signals) or 'não informado'}", f"- Arquivos de origem: {', '.join(f'`{s}`' for s in artifact['source_files']) or 'não encontrados'}", f"- Oportunidade: `{artifact['source_opportunity'] or 'não informada'}`", f"- Domínio: `{artifact['domain'] or 'não informado'}`", "",
-        "## Dados para estatísticas futuras", "", "```json", json.dumps(artifact, ensure_ascii=False, indent=2), "```", "",
-        "> Este registro é uma hipótese de investigação. Não é diagnóstico nem evidência clínica sobre uma criança.", "",
-    ]
     return filename, artifact | {"artifact_path": f"analysis/artifacts/{filename}"}
-
 
 def write_thesis_artifacts(theses: list[dict], run_id: str, generated_at: str) -> list[dict]:
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
@@ -123,7 +139,9 @@ def write_thesis_artifacts(theses: list[dict], run_id: str, generated_at: str) -
             f"# {record['short_title']}", "",
             f"- **Decisão:** `{record['decision']}`", f"- **Quando:** `{record['learned_at']}`", f"- **ID da tese:** `{record['thesis_id']}`", "",
             "## Em linguagem simples", "", record["learned_summary"], "",
-            "## O que foi investigado", "", record["what_was_investigated"], "",
+            "## O que foi investigado", "", record["what_was_investigated"], "", "## Tese em português simples", "", record["thesis_in_plain_portuguese"], "",
+            "## Variáveis usadas", "", '\n'.join(f"- **{name}**" for name in record["variable_names"]) or "- Nenhuma variável foi informada.", "",
+            "## Perguntas que o sistema fez", "", '\n'.join(f"- {question}" for question in record["questions_based_on_variables"]), "",
             "## De onde veio", "", f"- Sinais: {', '.join(f'`{s}`' for s in record['source_signals']) or 'não informado'}", f"- Arquivos de origem: {', '.join(f'`{s}`' for s in record['source_files']) or 'não encontrados'}", f"- Oportunidade: `{record['source_opportunity'] or 'não informada'}`", f"- Domínio: `{record['domain'] or 'não informado'}`", "",
             "## Dados para estatísticas futuras", "", "```json", json.dumps(record, ensure_ascii=False, indent=2), "```", "",
             "> Este registro é uma hipótese de investigação. Não é diagnóstico nem evidência clínica sobre uma criança.", "",
