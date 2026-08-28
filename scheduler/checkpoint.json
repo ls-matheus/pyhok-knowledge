@@ -1,10 +1,10 @@
 {
   "engine_version": "2.0.0-continuous-discovery",
-  "saved_at": "2026-08-28T03:14:56.739378+00:00",
-  "last_cycle_id": "cycle_20260828_031448_655769_4a96f2",
+  "saved_at": "2026-08-28T03:17:50.585291+00:00",
+  "last_cycle_id": "cycle_20260828_031742_501116_f4acec",
   "engine_status": "STOPPED",
   "stop_reason": "max_consecutive_errors",
-  "total_cycles": 70,
+  "total_cycles": 73,
   "successful_cycles": 1,
   "discoveries_total": 46,
   "new_theses_generated": 26,
@@ -12,8 +12,8 @@
   "accepted_proposals": 0,
   "quarantined_theses": 1,
   "quarantined_proposals": 1,
-  "rejected_theses": 69,
-  "rejected_proposals": 69,
+  "rejected_theses": 72,
+  "rejected_proposals": 72,
   "bindings_total": 0,
   "variables_unbound": 52,
   "variables_candidate": 0,
@@ -23,5 +23,5 @@
   "knowledge_edges": 1,
   "novelty_mean": 0.0,
   "information_gain_mean": 0.0,
-  "total_errors": 1980
+  "total_errors": 1985
 }
