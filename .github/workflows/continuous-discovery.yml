@@ -42,6 +42,9 @@ jobs:
         run: pip install jsonschema pytest google-genai
 
       - name: Run 25 continuous epistemic discovery cycles
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.6-flash' }}
         run: python scheduler/continuous_engine.py --max-cycles 25 --force --skip-git
 
       - name: Print observability dashboard
