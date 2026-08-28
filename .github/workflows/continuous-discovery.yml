@@ -2,7 +2,7 @@ name: PyHok Continuous Epistemic Discovery Engine (7/0)
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "0 */6 * * *"
   workflow_dispatch:
   push:
     branches:
@@ -51,11 +51,11 @@ jobs:
           fi
           python3 -c "from scheduler.state import reset_circuit_breaker; reset_circuit_breaker()"
 
-      - name: Run 25 continuous epistemic discovery cycles
+      - name: Run one continuous epistemic discovery cycle
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.6-flash' }}
-        run: python scheduler/continuous_engine.py --max-cycles 25 --force --skip-git
+        run: python scheduler/continuous_engine.py --max-cycles 1 --force --skip-git
 
       - name: Print observability dashboard
         run: python scheduler/continuous_engine.py --status
@@ -96,10 +96,3 @@ jobs:
           git commit -m "chore(discovery): publish ${MSG} [skip ci]"
           git push origin main
           echo "Published ${MSG} to GitHub successfully."
-
-      - name: Trigger next continuous discovery relay
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "Triggering next continuous relay..."
-          gh workflow run continuous-discovery.yml --repo "$GITHUB_REPOSITORY" || echo "Relay will be picked up by schedule."
