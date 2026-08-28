@@ -15,6 +15,7 @@ from evolution.ledger import (
     hash_knowledge_state,
     hash_proposal,
     append_ledger_event,
+    load_knowledge_state,
     verify_ledger_integrity,
     read_ledger_events,
 )
@@ -56,6 +57,20 @@ def test_hash_knowledge_state():
     }
     hash_val = hash_knowledge_state(state_mock)
     assert hash_val.startswith("sha256:")
+
+
+def test_load_knowledge_state_includes_open_theses(tmp_path):
+    theses_dir = tmp_path / "theses"
+    theses_dir.mkdir()
+    thesis = {"thesis_id": "thesis_001", "investigation_status": "OPEN"}
+    (theses_dir / "thesis_001.json").write_text(
+        json.dumps(thesis),
+        encoding="utf-8",
+    )
+
+    state = load_knowledge_state(tmp_path)
+
+    assert state["open_theses"] == [thesis]
 
 
 # ----------------------------------------------------------------------

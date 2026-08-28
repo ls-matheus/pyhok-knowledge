@@ -10,7 +10,10 @@ venv/
 .vscode/
 generator/input/agent_context.json
 
+# Generated run artifacts
+generator/output/*
+!generator/output/.gitkeep
+
 # Ledger and evaluations streams (kept as runtime ledgers or committed per cycle)
 evolution/post_evaluations.jsonl
 evolution/manifests/
-
