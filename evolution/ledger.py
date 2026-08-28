@@ -50,7 +50,8 @@ def load_knowledge_state(data_dir: Path = DATA_DIR) -> dict[str, Any]:
     extracted_state: dict[str, Any] = {
         "signals": [],
         "questions": [],
-        "relations": []
+        "relations": [],
+        "open_theses": [],
     }
 
     signals_dir = data_dir / "signals"

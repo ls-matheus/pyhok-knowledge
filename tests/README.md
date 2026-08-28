@@ -1,49 +1,22 @@
-# PyHok Knowledge Test Harness
+# Test Harness
 
-The test harness validates the separation between:
+The tests protect the repository's epistemic and operational invariants:
 
-1. Signal definitions
-2. Feature methods
-3. Questions / hypotheses
-4. Relations
-5. AI-generated proposals
-6. Cross-entity references
+- signal, question, relation, and proposal schemas;
+- cross-entity references and conflict detection;
+- fail-closed epistemic review and quarantine;
+- acyclic provenance in the knowledge graph;
+- hash-chained ledger integrity;
+- negative/exploration memory;
+- checkpoint recovery and graceful shutdown;
+- the end-to-end validation pipeline.
 
-## Test flow
-
-```text
-AI / Generator
-      ↓
-Proposal JSON
-      ↓
-Proposal validation
-      ↓
-Schema validation
-      ↓
-Cross-reference validation
-      ↓
-Conflict validation
-      ↓
-Release build
-
-
-Depois execute:
+Run the complete local harness with:
 
 ```bash
-git add .
-git commit -m "feat: add AI proposal test harness"
-git push
+bash tools/test_all.sh
+```
 
-mkdir -p schemas dataset/releases dataset/signals dataset/questions dataset/relations tests/fixtures/valid tests/fixtures/invalid tests/unit tests/integration scripts .github/workflows && \
-touch dataset/releases/.gitkeep dataset/signals/.gitkeep dataset/questions/.gitkeep dataset/relations/.gitkeep && \
-cat > tests/fixtures/valid/signal_pointer_velocity.json <<'EOF'
-{
-  "id": "sig_test_pointer_velocity",
-  "kind": "RAW",
-  "source": "pointer",
-  "data_type": "scalar",
-  "unit": "pixels_per_second",
-  "temporal_window_ms": 0,
-  "privacy_level": "ANONYMOUS_METRIC",
-  "quality_metric_id": "sig_test_pointer_quality"
-}
+The suite uses synthetic fixtures only. Passing tests prove that the contracts
+and code paths behave as specified; they do not prove that a hypothesis is
+true or that synthetic observations represent real people.
