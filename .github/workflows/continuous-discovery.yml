@@ -2,7 +2,7 @@ name: PyHok Continuous Epistemic Discovery Engine (7/0)
 
 on:
   schedule:
-    - cron: "0 */6 * * *"
+    - cron: "*/10 * * * *"
   workflow_dispatch:
   push:
     branches:
@@ -51,11 +51,32 @@ jobs:
           fi
           python3 -c "from scheduler.state import reset_circuit_breaker; reset_circuit_breaker()"
 
-      - name: Run one continuous epistemic discovery cycle
+      - name: Run discovery cycle with model fallback
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.6-flash' }}
-        run: python scheduler/continuous_engine.py --max-cycles 1 --force --skip-git
+          GEMINI_PRIMARY_MODEL: ${{ vars.GEMINI_PRIMARY_MODEL || 'gemini-2.5-flash' }}
+          GEMINI_FALLBACK_MODEL: ${{ vars.GEMINI_FALLBACK_MODEL || 'gemini-2.5-flash-lite' }}
+        run: |
+          run_model() {
+            local model="$1"
+            echo "Trying Gemini model: ${model}"
+            GEMINI_MODEL="$model" python scheduler/continuous_engine.py --max-cycles 1 --force --skip-git
+          }
+
+          primary_exit=0
+          run_model "$GEMINI_PRIMARY_MODEL" || primary_exit=$?
+          if [ "$primary_exit" -eq 0 ] && python3 -c "import json; s=json.load(open('scheduler/status.json')); raise SystemExit(0 if s.get('status') == 'IDLE' else 1)"; then
+            echo "Discovery cycle completed with ${GEMINI_PRIMARY_MODEL}."
+          else
+            echo "Primary model failed; resetting circuit breaker and trying ${GEMINI_FALLBACK_MODEL}."
+            python3 -c "from scheduler.state import reset_circuit_breaker; reset_circuit_breaker()"
+            fallback_exit=0
+            run_model "$GEMINI_FALLBACK_MODEL" || fallback_exit=$?
+            if [ "$fallback_exit" -ne 0 ]; then
+              exit "$fallback_exit"
+            fi
+            python3 -c "import json; s=json.load(open('scheduler/status.json')); raise SystemExit(0 if s.get('status') == 'IDLE' else 1)"
+          fi
 
       - name: Print observability dashboard
         run: python scheduler/continuous_engine.py --status
