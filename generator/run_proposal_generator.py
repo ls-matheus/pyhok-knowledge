@@ -14,7 +14,7 @@ from google.genai import types
 ROOT = Path(__file__).resolve().parents[1]
 
 API_KEY = os.environ.get("GEMINI_API_KEY")
-MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
+MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash-lite")
 
 MASTER_DOCUMENT_FILE = (
     ROOT / "docs/PYHOK_MASTER_ARCHITECTURE.md"
@@ -698,7 +698,6 @@ def main() -> None:
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
             response_schema=response_schema,
-            temperature=0.0,
         ),
     )
 
