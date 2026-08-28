@@ -49,6 +49,15 @@ def short_slug(text: str, fallback: str) -> str:
     return "-".join(words[:6])[:48].strip("-") or fallback
 
 
+def signal_files(signal_ids: list) -> list[str]:
+    files = []
+    signal_dir = ROOT / "data/signals"
+    for signal_id in signal_ids:
+        matches = sorted(signal_dir.glob(f"{signal_id}.json"))
+        files.extend(str(path.relative_to(ROOT)) for path in matches)
+    return files
+
+
 def score(thesis: dict, name: str) -> str:
     review = thesis.get("review_result", {})
     if not isinstance(review, dict):
@@ -76,6 +85,7 @@ def thesis_artifact(thesis: dict, run_id: str, generated_at: str) -> tuple[str, 
         "short_title": title[:120],
         "what_was_investigated": title,
         "source_signals": source_signals,
+        "source_files": signal_files(source_signals),
         "source_opportunity": thesis.get("opportunity_id"),
         "domain": thesis.get("target_domain") or thesis.get("domain"),
         "epistemic_status": thesis.get("epistemic_status") or review.get("assigned_epistemic_status"),
@@ -85,7 +95,11 @@ def thesis_artifact(thesis: dict, run_id: str, generated_at: str) -> tuple[str, 
         "evidence": review.get("verifier", {}).get("evidence_roots", []) if isinstance(review.get("verifier"), dict) else [],
         "evidence_strength": review.get("verifier", {}).get("evidence_strength_score") if isinstance(review.get("verifier"), dict) else None,
         "rejection_reason": thesis.get("rejection_reason") or review.get("quarantine_reason"),
-        "learned_summary": ("Hipótese admitida para investigação futura." if decision == "ACCEPT" else "A execução não incorporou esta hipótese ao conhecimento ativo; a razão registrada deve orientar a próxima exploração."),
+        "learned": decision == "ACCEPT",
+        "learning_outcome": ("registered_as_investigational_knowledge" if decision == "ACCEPT" else "not_learned"),
+        "what_was_learned": ("A hipótese foi registrada como conhecimento investigável; ainda não foi comprovada." if decision == "ACCEPT" else "Nenhum novo conhecimento foi incorporado ao estado ativo."),
+        "why_not_learned": (None if decision == "ACCEPT" else thesis.get("rejection_reason") or review.get("quarantine_reason") or "A revisão não autorizou a incorporação."),
+        "learned_summary": ("Hipótese admitida e registrada para investigação futura; isso não significa que seja verdadeira." if decision == "ACCEPT" else "A execução não incorporou esta hipótese ao conhecimento ativo; a razão registrada deve orientar a próxima exploração."),
     }
     filename = f"{short_slug(title, 'thesis')}-{short_slug(thesis_id, 'id')}.md"
     body = [
@@ -93,7 +107,7 @@ def thesis_artifact(thesis: dict, run_id: str, generated_at: str) -> tuple[str, 
         f"- **Decisão:** `{decision}`", f"- **Quando:** `{artifact['learned_at']}`", f"- **ID da tese:** `{thesis_id}`", "",
         "## Em linguagem simples", "", artifact["learned_summary"], "",
         "## O que foi investigado", "", title, "",
-        "## De onde veio", "", f"- Sinais: {', '.join(f'`{s}`' for s in source_signals) or 'não informado'}", f"- Oportunidade: `{artifact['source_opportunity'] or 'não informada'}`", f"- Domínio: `{artifact['domain'] or 'não informado'}`", "",
+        "## De onde veio", "", f"- Sinais: {', '.join(f'`{s}`' for s in source_signals) or 'não informado'}", f"- Arquivos de origem: {', '.join(f'`{s}`' for s in artifact['source_files']) or 'não encontrados'}", f"- Oportunidade: `{artifact['source_opportunity'] or 'não informada'}`", f"- Domínio: `{artifact['domain'] or 'não informado'}`", "",
         "## Dados para estatísticas futuras", "", "```json", json.dumps(artifact, ensure_ascii=False, indent=2), "```", "",
         "> Este registro é uma hipótese de investigação. Não é diagnóstico nem evidência clínica sobre uma criança.", "",
     ]
@@ -110,7 +124,7 @@ def write_thesis_artifacts(theses: list[dict], run_id: str, generated_at: str) -
             f"- **Decisão:** `{record['decision']}`", f"- **Quando:** `{record['learned_at']}`", f"- **ID da tese:** `{record['thesis_id']}`", "",
             "## Em linguagem simples", "", record["learned_summary"], "",
             "## O que foi investigado", "", record["what_was_investigated"], "",
-            "## De onde veio", "", f"- Sinais: {', '.join(f'`{s}`' for s in record['source_signals']) or 'não informado'}", f"- Oportunidade: `{record['source_opportunity'] or 'não informada'}`", f"- Domínio: `{record['domain'] or 'não informado'}`", "",
+            "## De onde veio", "", f"- Sinais: {', '.join(f'`{s}`' for s in record['source_signals']) or 'não informado'}", f"- Arquivos de origem: {', '.join(f'`{s}`' for s in record['source_files']) or 'não encontrados'}", f"- Oportunidade: `{record['source_opportunity'] or 'não informada'}`", f"- Domínio: `{record['domain'] or 'não informado'}`", "",
             "## Dados para estatísticas futuras", "", "```json", json.dumps(record, ensure_ascii=False, indent=2), "```", "",
             "> Este registro é uma hipótese de investigação. Não é diagnóstico nem evidência clínica sobre uma criança.", "",
         ]) + "\n", encoding="utf-8")
@@ -133,6 +147,7 @@ def main() -> int:
     lines = [
         "# PyHok Discovery Run Summary", "", f"Generated: `{generated_at}`", f"Run ID: `{run_id}`", "",
         "## Resultado em linguagem simples", "", f"- Foram analisadas **{total} teses** nesta execução.", f"- **{accepted}** foram aceitas para investigação; isso não significa que sejam verdadeiras.", f"- **{rejected}** foram rejeitadas, normalmente por repetição, falta de evidência ou excesso de conclusão.", f"- **{quarantined}** ficaram em quarentena para revisão.", "",
+        f"- Aprendeu algo? **{'Sim, registrou uma hipótese investigável' if accepted else 'Não houve aprendizado incorporado'}**.", "- O que aprendeu: hipóteses aceitas foram registradas, mas continuam sem comprovação.", f"- Por que não aprendeu: {rejected + quarantined} teses não foram incorporadas por rejeição ou quarentena.", "",
         "Uma tese é uma pergunta/hipótese de investigação. O sistema não está diagnosticando uma criança e não transforma um comportamento isolado em causa clínica.", "",
         "## Estado operacional", "", f"- Status: **{status.get('status', 'não informado')}**", f"- Último erro: `{status.get('last_error') or 'nenhum registrado'}`", f"- Falhas acumuladas: **{metrics.get('failed_runs', 'não informado')}**", "",
         "## Artefatos desta execução", "", f"Foram gravados **{len(records)} artefatos** em `analysis/artifacts/`. Cada arquivo explica a tese e termina com dados estruturados para estatísticas futuras: quando foi registrada, de onde veio, o que investigava, decisão, evidências e pontuações.", "", "## Como interpretar", "", "- Aceita = hipótese legítima para continuar investigando, não verdade.", "- Rejeitada = não entrou no conhecimento ativo; a razão fica registrada.", "- Dados sintéticos não representam medições reais de crianças.", "",
