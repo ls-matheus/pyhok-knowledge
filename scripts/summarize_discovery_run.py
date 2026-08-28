@@ -157,8 +157,28 @@ def write_thesis_artifacts(theses: list[dict], run_id: str, generated_at: str) -
 def main() -> int:
     status = read_json(STATUS)
     checkpoint = read_json(CHECKPOINT)
-    if checkpoint.get("saved_at") and checkpoint.get("saved_at") != status.get("last_run"):
-        status = {**status, "status": checkpoint.get("engine_status", status.get("status")), "last_error": None, "stats": {**status.get("stats", {}), "total_runs": checkpoint.get("total_cycles", status.get("stats", {}).get("total_runs", 0)), "failed_runs": checkpoint.get("total_errors", status.get("stats", {}).get("failed_runs", 0))}}
+    checkpoint_is_newer = False
+    checkpoint_saved_at = checkpoint.get("saved_at")
+    status_last_run = status.get("last_run")
+    if checkpoint_saved_at:
+        try:
+            checkpoint_time = datetime.fromisoformat(checkpoint_saved_at.replace("Z", "+00:00"))
+            status_time = datetime.fromisoformat(status_last_run.replace("Z", "+00:00")) if status_last_run else None
+            checkpoint_is_newer = status_time is None or checkpoint_time > status_time
+        except (TypeError, ValueError):
+            checkpoint_is_newer = checkpoint_saved_at != status_last_run
+
+    if checkpoint_is_newer:
+        status = {
+            **status,
+            "status": checkpoint.get("engine_status", status.get("status")),
+            "last_stop_reason": checkpoint.get("stop_reason") or status.get("last_stop_reason"),
+            "stats": {
+                **status.get("stats", {}),
+                "total_runs": checkpoint.get("total_cycles", status.get("stats", {}).get("total_runs", 0)),
+                "failed_runs": checkpoint.get("total_errors", status.get("stats", {}).get("failed_runs", 0)),
+            },
+        }
     theses_data = read_json(THESES)
     theses = theses_from(theses_data)
     total, accepted, rejected, quarantined = count_theses(theses_data)
@@ -166,12 +186,17 @@ def main() -> int:
     run_id = os.environ.get("GITHUB_RUN_ID", "local")
     records = write_thesis_artifacts(theses, run_id, generated_at)
     metrics = status.get("stats", {}) if isinstance(status.get("stats"), dict) else {}
+    if checkpoint_is_newer:
+        error_display = "não registrado no checkpoint mais recente"
+    else:
+        error_display = status.get("last_error") or "nenhum registrado"
+    stop_reason = status.get("last_stop_reason") or "não informado"
     lines = [
         "# PyHok Discovery Run Summary", "", f"Generated: `{generated_at}`", f"Run ID: `{run_id}`", "",
         "## Resultado em linguagem simples", "", f"- Foram analisadas **{total} teses** nesta execução.", f"- **{accepted}** foram aceitas para investigação; isso não significa que sejam verdadeiras.", f"- **{rejected}** foram rejeitadas, normalmente por repetição, falta de evidência ou excesso de conclusão.", f"- **{quarantined}** ficaram em quarentena para revisão.", "",
         f"- Aprendeu algo? **{'Sim, registrou uma hipótese investigável' if accepted else 'Não houve aprendizado incorporado'}**.", "- O que aprendeu: hipóteses aceitas foram registradas, mas continuam sem comprovação.", f"- Por que não aprendeu: {rejected + quarantined} teses não foram incorporadas por rejeição ou quarentena.", "",
         "Uma tese é uma pergunta/hipótese de investigação. O sistema não está diagnosticando uma criança e não transforma um comportamento isolado em causa clínica.", "",
-        "## Estado operacional", "", f"- Status: **{status.get('status', 'não informado')}**", f"- Último erro: `{status.get('last_error') or 'nenhum registrado'}`", f"- Falhas acumuladas: **{metrics.get('failed_runs', 'não informado')}**", "",
+        "## Estado operacional", "", f"- Status: **{status.get('status', 'não informado')}**", f"- Motivo da parada: `{stop_reason}`", f"- Último erro: `{error_display}`", f"- Erros acumulados do engine: **{metrics.get('failed_runs', 'não informado')}**", "",
         "## Artefatos desta execução", "", f"Foram gravados **{len(records)} artefatos** em `analysis/artifacts/`. Cada arquivo explica a tese e termina com dados estruturados para estatísticas futuras: quando foi registrada, de onde veio, o que investigava, decisão, evidências e pontuações.", "", "## Como interpretar", "", "- Aceita = hipótese legítima para continuar investigando, não verdade.", "- Rejeitada = não entrou no conhecimento ativo; a razão fica registrada.", "- Dados sintéticos não representam medições reais de crianças.", "",
         "## Links úteis", "", f"- Execução no GitHub Actions: https://github.com/{os.environ.get('GITHUB_REPOSITORY', 'ls-matheus/pyhok-knowledge')}/actions/runs/{run_id}", "- Logs detalhados: abra a execução acima e expanda o job.",
     ]

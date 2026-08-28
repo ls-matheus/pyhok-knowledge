@@ -13,7 +13,7 @@ from google.genai import types
 ROOT = Path(__file__).resolve().parents[1]
 
 API_KEY = os.environ.get("GEMINI_API_KEY")
-MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash-lite")
+MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 
 # ============================================================
 # FOUR-LAYER AGENT CONTEXT
