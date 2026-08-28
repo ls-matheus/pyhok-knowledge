@@ -13,7 +13,7 @@ from google.genai import types
 ROOT = Path(__file__).resolve().parents[1]
 
 API_KEY = os.environ.get("GEMINI_API_KEY")
-MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
+MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash-lite")
 
 # ============================================================
 # FOUR-LAYER AGENT CONTEXT
@@ -496,8 +496,7 @@ END INPUT
         config=types.GenerateContentConfig(
             system_instruction=auditor_prompt,
             response_mime_type="application/json",
-            response_schema=RESPONSE_SCHEMA,
-            temperature=0.0
+            response_schema=RESPONSE_SCHEMA
         )
     )
 
