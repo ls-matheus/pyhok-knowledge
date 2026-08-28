@@ -64,16 +64,17 @@ jobs:
           path: |
             analysis/run_summary.md
             analysis/run_summary_console.txt
+            analysis/artifacts/
           retention-days: 90
 
       - name: Verify quality gates
         run: python scheduler/quality_gate.py
 
-      - name: Commit and publish theses to GitHub
+      - name: Commit and publish theses and summaries to GitHub
         run: |
           git config user.name "PyHok Discovery Bot"
           git config user.email "bot@pyhok.org"
-          git add -A generator/output/ data/theses/ evolution/ledger.jsonl evolution/rejected_claims.jsonl scheduler/checkpoint.json scheduler/status.json || true
+          git add -A analysis/artifacts/ generator/output/ data/theses/ evolution/ledger.jsonl evolution/rejected_claims.jsonl scheduler/checkpoint.json scheduler/status.json || true
           if git diff --cached --quiet; then
             echo "Nothing new to commit."
             exit 0
