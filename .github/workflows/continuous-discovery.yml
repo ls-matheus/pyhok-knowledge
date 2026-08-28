@@ -41,6 +41,16 @@ jobs:
       - name: Install dependencies
         run: pip install jsonschema pytest google-genai
 
+      - name: Verify Gemini API secret and reset stale circuit breaker
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "GEMINI_API_KEY is not available to this workflow."
+            exit 1
+          fi
+          python3 -c "from scheduler.state import reset_circuit_breaker; reset_circuit_breaker()"
+
       - name: Run 25 continuous epistemic discovery cycles
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
